@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useState } from "react";
 import HomeScreen from "./components/HomeScreen";
@@ -14,32 +14,49 @@ type DbRow = {
   nickname_display: string;
   score: number;
   updated_at: string;
+  character?: CharId;
 };
 
 function normalizeNick(raw: string) {
-  return raw.trim().toLowerCase(); // ✅ 대소문자 통합 핵심
+  return raw.trim().toLowerCase();
 }
 
 async function fetchMyBestScore(nicknameDisplay: string) {
   const key = normalizeNick(nicknameDisplay);
 
-  const { data, error } = await supabase
+  const initial = await supabase
     .from("leaderboard_best_v2")
-    .select("score,nickname_display")
+    .select("score,nickname_display,character")
     .eq("nickname_key", key)
     .maybeSingle();
+  let data: any = initial.data;
+  let error: any = initial.error;
+
+  if (error && String(error.message).toLowerCase().includes("character")) {
+    const fallback = await supabase
+      .from("leaderboard_best_v2")
+      .select("score,nickname_display")
+      .eq("nickname_key", key)
+      .maybeSingle();
+    data = fallback.data;
+    error = fallback.error;
+  }
 
   if (error) throw error;
   if (!data) return undefined;
 
-  return { score: data.score as number, display: data.nickname_display as string };
+  const row = data as { score: number; nickname_display: string; character?: CharId | null };
+  return {
+    score: row.score,
+    display: row.nickname_display,
+    character: row.character ?? undefined,
+  };
 }
-
 
 function startOfTodayLocalISO() {
   const d = new Date();
-  d.setHours(0, 0, 0, 0); // 로컬 기준 "오늘 0시"
-  return d.toISOString(); // UTC로 변환된 ISO (Supabase timestamptz와 비교 가능)
+  d.setHours(0, 0, 0, 0);
+  return d.toISOString();
 }
 
 export default function Page() {
@@ -69,7 +86,7 @@ export default function Page() {
 
     let q = supabase
       .from("leaderboard_best_v2")
-      .select("nickname_key,nickname_display,score,updated_at")
+      .select("nickname_key,nickname_display,score,updated_at,character")
       .order("score", { ascending: false })
       .order("updated_at", { ascending: true })
       .limit(20);
@@ -78,18 +95,37 @@ export default function Page() {
       q = q.gte("updated_at", startOfTodayLocalISO());
     }
 
-    const { data, error } = await q;
+    const initial = await q;
+    let data: any = initial.data;
+    let error: any = initial.error;
+
+    if (error && String(error.message).toLowerCase().includes("character")) {
+      let qFallback = supabase
+        .from("leaderboard_best_v2")
+        .select("nickname_key,nickname_display,score,updated_at")
+        .order("score", { ascending: false })
+        .order("updated_at", { ascending: true })
+        .limit(20);
+
+      if (m === "today") {
+        qFallback = qFallback.gte("updated_at", startOfTodayLocalISO());
+      }
+
+      const fallback = await qFallback;
+      data = fallback.data;
+      error = fallback.error;
+    }
+
     setLbLoading(false);
 
     if (error) {
       console.error(error);
-      alert("랭킹 불러오기에 실패했어. (콘솔 확인)");
+      alert("Failed to load leaderboard.");
       return;
     }
 
     const list = (data as DbRow[]) ?? [];
 
-    // ✅ 동점 공동순위 (1,1,3)
     let rank = 0;
     let lastScoreLocal: number | null = null;
 
@@ -98,11 +134,13 @@ export default function Page() {
         rank = idx + 1;
         lastScoreLocal = r.score;
       }
+
       return {
         rank,
         nickname: r.nickname_display,
         score: r.score,
         date: new Date(r.updated_at).toLocaleDateString(),
+        character: r.character,
       };
     });
 
@@ -125,60 +163,70 @@ export default function Page() {
       setMyRank(undefined);
       return;
     }
+
     setMyRank((count ?? 0) + 1);
   };
 
   const openLeaderboard = async () => {
-  const nick = (localStorage.getItem("nickname") || "").trim();
-  setLastNick(nick || undefined);
+    const nick = (localStorage.getItem("nickname") || "").trim();
+    setLastNick(nick || undefined);
 
-  // Top20 먼저
-  await fetchTop20(mode);
+    await fetchTop20(mode);
 
-  // ✅ 내 best + 내 rank도 같이
-  if (nick.length >= 2 && nick.length <= 12) {
-    try {
-      const mine = await fetchMyBestScore(nick);
-      if (mine) {
-        setLastScore(mine.score);
-        await calcMyRank(mode, mine.score);
-      } else {
+    if (nick.length >= 2 && nick.length <= 12) {
+      try {
+        const mine = await fetchMyBestScore(nick);
+        if (mine) {
+          setLastScore(mine.score);
+          await calcMyRank(mode, mine.score);
+        } else {
+          setLastScore(undefined);
+          setMyRank(undefined);
+        }
+      } catch (e) {
+        console.error(e);
         setLastScore(undefined);
         setMyRank(undefined);
       }
-    } catch (e) {
-      console.error(e);
+    } else {
       setLastScore(undefined);
       setMyRank(undefined);
     }
-  } else {
-    setLastScore(undefined);
-    setMyRank(undefined);
-  }
 
-  setLbOpen(true);
-};
+    setLbOpen(true);
+  };
 
-
-  const upsertBestScore = async (nicknameDisplay: string, score: number) => {
+  const upsertBestScore = async (
+    nicknameDisplay: string,
+    score: number,
+    selectedCharacter: CharId
+  ) => {
     const nickname_key = normalizeNick(nicknameDisplay);
 
-    const { error } = await supabase
-      .from("leaderboard_best_v2")
-      .upsert(
-        [{ nickname_key, nickname_display: nicknameDisplay.trim(), score }],
-        { onConflict: "nickname_key" }
-      );
+    let { error } = await supabase.from("leaderboard_best_v2").upsert(
+      [{ nickname_key, nickname_display: nicknameDisplay.trim(), score, character: selectedCharacter }],
+      { onConflict: "nickname_key" }
+    );
+
+    if (error && String(error.message).toLowerCase().includes("character")) {
+      const fallback = await supabase
+        .from("leaderboard_best_v2")
+        .upsert([{ nickname_key, nickname_display: nicknameDisplay.trim(), score }], {
+          onConflict: "nickname_key",
+        });
+      error = fallback.error;
+    }
 
     if (error) {
       console.error(error);
-      alert("점수 업로드 실패! (콘솔 확인)");
+      alert("Failed to save score.");
     }
   };
 
   const onChangeMode = async (m: LeaderMode) => {
     setMode(m);
     await fetchTop20(m);
+
     if (lastScore !== undefined) {
       await calcMyRank(m, lastScore);
     } else {
@@ -217,7 +265,7 @@ export default function Page() {
             setLastScore(finalScore);
 
             if (nick.length >= 2 && nick.length <= 12) {
-              await upsertBestScore(nick, finalScore);
+              await upsertBestScore(nick, finalScore, character);
               await calcMyRank(mode, finalScore);
             } else {
               setMyRank(undefined);
