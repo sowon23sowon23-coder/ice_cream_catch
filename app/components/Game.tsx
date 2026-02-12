@@ -18,7 +18,7 @@ export default function Game({
   startSignal: number;
   onExitToHome: () => void;
   onBestScore: (best: number) => void;
-  onGameOver?: (finalScore: number) => void; // ✅ 안전: optional
+  onGameOver?: (finalScore: number) => void;
 }) {
   const [phase, setPhase] = useState<"idle" | "play" | "over">("idle");
   const [countdown, setCountdown] = useState<"ready" | "go" | null>(null);
@@ -112,6 +112,38 @@ export default function Game({
     setBounce(true);
     setTimeout(() => setBounce(false), 140);
   };
+
+  // ✅ (모바일 스크롤/뷰포트 움직임 방지) play 동안 body 스크롤 잠금
+  useEffect(() => {
+    if (phase !== "play") return;
+    const prevOverflow = document.body.style.overflow;
+    const prevTouchAction = document.body.style.touchAction;
+
+    document.body.style.overflow = "hidden";
+    // 일부 브라우저에서 도움이 됨 (과하게 막고 싶지 않으면 지워도 됨)
+    document.body.style.touchAction = "none";
+
+    return () => {
+      document.body.style.overflow = prevOverflow;
+      document.body.style.touchAction = prevTouchAction;
+    };
+  }, [phase]);
+
+  // ✅ (모바일 스크롤 방지 확실버전) passive:false + preventDefault 터치 리스너
+  useEffect(() => {
+    const el = areaRef.current;
+    if (!el) return;
+
+    const handler = (e: TouchEvent) => {
+      if (phase !== "play") return;
+      // 페이지 스크롤/당겨서 새로고침 방지
+      e.preventDefault();
+      if (e.touches && e.touches.length > 0) move(e.touches[0].clientX);
+    };
+
+    el.addEventListener("touchmove", handler, { passive: false });
+    return () => el.removeEventListener("touchmove", handler);
+  }, [phase]); // move는 내부에서 areaRef/current로 처리하므로 phase만 의존
 
   // ✅ 게임오버 처리 (딱 1번만)
   useEffect(() => {
@@ -228,7 +260,7 @@ export default function Game({
   }, [phase]);
 
   return (
-    <main className="min-h-screen bg-gradient-to-b from-pink-100 to-blue-100 flex items-center justify-center p-4">
+    <main className="min-h-[100dvh] bg-gradient-to-b from-pink-100 to-blue-100 flex items-center justify-center p-4">
       <style jsx global>{`
         @keyframes shake {
           0% {
@@ -263,8 +295,8 @@ export default function Game({
         <div
           ref={areaRef}
           onMouseMove={(e) => phase === "play" && move(e.clientX)}
-          onTouchMove={(e) => phase === "play" && move(e.touches[0].clientX)}
-          className={`relative aspect-[3/4] rounded-3xl bg-sky-200 overflow-hidden shadow-xl ${
+          // onTouchMove는 제거: addEventListener로 passive:false 처리 중
+          className={`relative aspect-[3/4] rounded-3xl bg-sky-200 overflow-hidden shadow-xl touch-none ${
             shake ? "animate-shake" : ""
           }`}
         >
