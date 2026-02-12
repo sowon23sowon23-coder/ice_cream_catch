@@ -285,6 +285,24 @@ export default function Game({
         .animate-shake {
           animation: shake 0.18s ease-in-out;
         }
+        @keyframes bubbleFloat {
+          0% {
+            transform: translateY(0) scale(1);
+            opacity: 0;
+          }
+          10% {
+            opacity: 0.45;
+          }
+          100% {
+            transform: translateY(-130px) scale(1.15);
+            opacity: 0;
+          }
+        }
+        .bubble-float {
+          animation-name: bubbleFloat;
+          animation-timing-function: linear;
+          animation-iteration-count: infinite;
+        }
       `}</style>
 
       <div className="w-full max-w-md">
@@ -296,10 +314,35 @@ export default function Game({
           ref={areaRef}
           onMouseMove={(e) => phase === "play" && move(e.clientX)}
           // onTouchMove는 제거: addEventListener로 passive:false 처리 중
-          className={`relative aspect-[3/4] rounded-3xl bg-sky-200 overflow-hidden shadow-xl touch-none ${
+          className={`relative aspect-[3/4] rounded-3xl overflow-hidden shadow-xl ring-1 ring-white/50 touch-none bg-[radial-gradient(circle_at_18%_18%,rgba(255,255,255,0.48),transparent_36%),linear-gradient(180deg,#99dcff_0%,#70c9ff_48%,#4ca6e8_100%)] ${
             shake ? "animate-shake" : ""
           }`}
         >
+          <div className="absolute inset-0 pointer-events-none z-0">
+            <div className="absolute -top-10 -left-6 h-40 w-40 rounded-full bg-white/25 blur-2xl" />
+            <div className="absolute top-12 -right-10 h-36 w-36 rounded-full bg-cyan-100/30 blur-2xl" />
+            <div className="absolute bottom-[-4.5rem] left-[-2rem] h-36 w-44 rounded-[50%] bg-white/35 blur-md" />
+            <div className="absolute bottom-[-4rem] right-[-2rem] h-32 w-40 rounded-[50%] bg-white/30 blur-md" />
+          </div>
+
+          <div className="absolute inset-0 pointer-events-none z-0">
+            {[8, 22, 34, 48, 61, 77, 90].map((left, idx) => (
+              <span
+                key={`bubble-${left}`}
+                className="bubble-float absolute bottom-4 rounded-full bg-white/35"
+                style={{
+                  left: `${left}%`,
+                  width: `${10 + (idx % 3) * 4}px`,
+                  height: `${10 + (idx % 3) * 4}px`,
+                  animationDelay: `${idx * 0.65}s`,
+                  animationDuration: `${4.8 + (idx % 3) * 1.2}s`,
+                }}
+              />
+            ))}
+          </div>
+
+          <div className="absolute inset-x-0 bottom-0 h-28 bg-gradient-to-t from-white/30 to-transparent pointer-events-none z-0" />
+
           {/* READY / GO */}
           {countdown && (
             <div className="absolute inset-0 z-30 flex items-center justify-center">
