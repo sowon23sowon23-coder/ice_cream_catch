@@ -6,7 +6,14 @@ type CharId = "green" | "berry" | "sprinkle";
 
 type Ice = { id: number; x: number; y: number; v: number };
 type Pop = { id: number; x: number; y: number; text: string; born: number };
-const GAME_BG_IMAGES = ["/game-bg-1.jpg", "/game-bg-2.jpg"] as const;
+const GAME_BG_CANDIDATES = [
+  "/game-bg-1.jpg",
+  "/game-bg-2.jpg",
+  "/game-bg-1.jpeg",
+  "/game-bg-2.jpeg",
+  "/game-bg-1.png",
+  "/game-bg-2.png",
+] as const;
 const DEFAULT_GAME_BG =
   "radial-gradient(circle at 18% 18%, rgba(255,255,255,0.48), transparent 36%), linear-gradient(180deg, #99dcff 0%, #70c9ff 48%, #4ca6e8 100%)";
 
@@ -55,8 +62,27 @@ export default function Game({
   const gameOverFiredRef = useRef(false);
 
   useEffect(() => {
-    const randomIndex = Math.floor(Math.random() * GAME_BG_IMAGES.length);
-    setGameBg(GAME_BG_IMAGES[randomIndex]);
+    let active = true;
+
+    const canLoad = (src: string) =>
+      new Promise<boolean>((resolve) => {
+        const img = new Image();
+        img.onload = () => resolve(true);
+        img.onerror = () => resolve(false);
+        img.src = src;
+      });
+
+    (async () => {
+      const checks = await Promise.all(GAME_BG_CANDIDATES.map((src) => canLoad(src)));
+      const available = GAME_BG_CANDIDATES.filter((_, i) => checks[i]);
+      if (!active || available.length === 0) return;
+      const randomIndex = Math.floor(Math.random() * available.length);
+      setGameBg(available[randomIndex]);
+    })();
+
+    return () => {
+      active = false;
+    };
   }, []);
 
   const stopAll = () => {
