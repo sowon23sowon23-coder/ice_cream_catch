@@ -314,9 +314,13 @@ export default function Game({
           ref={areaRef}
           onMouseMove={(e) => phase === "play" && move(e.clientX)}
           // onTouchMove는 제거: addEventListener로 passive:false 처리 중
-          className={`relative aspect-[3/4] rounded-3xl overflow-hidden shadow-xl ring-1 ring-white/50 touch-none bg-[radial-gradient(circle_at_18%_18%,rgba(255,255,255,0.48),transparent_36%),linear-gradient(180deg,#99dcff_0%,#70c9ff_48%,#4ca6e8_100%)] ${
+          className={`relative aspect-[3/4] rounded-3xl overflow-hidden shadow-xl ring-1 ring-white/50 touch-none ${
             shake ? "animate-shake" : ""
           }`}
+          style={{
+            backgroundImage:
+              "radial-gradient(circle at 18% 18%, rgba(255,255,255,0.48), transparent 36%), linear-gradient(180deg, #99dcff 0%, #70c9ff 48%, #4ca6e8 100%)",
+          }}
         >
           <div className="absolute inset-0 pointer-events-none z-0">
             <div className="absolute -top-10 -left-6 h-40 w-40 rounded-full bg-white/25 blur-2xl" />
