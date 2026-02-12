@@ -6,6 +6,9 @@ type CharId = "green" | "berry" | "sprinkle";
 
 type Ice = { id: number; x: number; y: number; v: number };
 type Pop = { id: number; x: number; y: number; text: string; born: number };
+const GAME_BG_IMAGES = ["/game-bg-1.jpg", "/game-bg-2.jpg"] as const;
+const DEFAULT_GAME_BG =
+  "radial-gradient(circle at 18% 18%, rgba(255,255,255,0.48), transparent 36%), linear-gradient(180deg, #99dcff 0%, #70c9ff 48%, #4ca6e8 100%)";
 
 export default function Game({
   character,
@@ -33,6 +36,7 @@ export default function Game({
   const [tilt, setTilt] = useState(0);
   const [bounce, setBounce] = useState(false);
   const [shake, setShake] = useState(false);
+  const [gameBg, setGameBg] = useState<string | null>(null);
 
   const areaRef = useRef<HTMLDivElement>(null);
 
@@ -49,6 +53,11 @@ export default function Game({
   }, [playerX]);
 
   const gameOverFiredRef = useRef(false);
+
+  useEffect(() => {
+    const randomIndex = Math.floor(Math.random() * GAME_BG_IMAGES.length);
+    setGameBg(GAME_BG_IMAGES[randomIndex]);
+  }, []);
 
   const stopAll = () => {
     if (spawnRef.current !== null) {
@@ -319,7 +328,11 @@ export default function Game({
           }`}
           style={{
             backgroundImage:
-              "radial-gradient(circle at 18% 18%, rgba(255,255,255,0.48), transparent 36%), linear-gradient(180deg, #99dcff 0%, #70c9ff 48%, #4ca6e8 100%)",
+              gameBg
+                ? `linear-gradient(180deg, rgba(255,255,255,0.18), rgba(255,255,255,0.18)), url(${gameBg})`
+                : DEFAULT_GAME_BG,
+            backgroundSize: "cover",
+            backgroundPosition: "center",
           }}
         >
           <div className="absolute inset-0 pointer-events-none z-0">
