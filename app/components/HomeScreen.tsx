@@ -33,7 +33,7 @@ export default function HomeScreen({
     const nick = nickname.trim();
 
     if (nick.length < 2 || nick.length > 12) {
-      alert("닉네임은 2~12자로 입력해줘!");
+      alert("Please enter a nickname between 2 and 12 characters.");
       return;
     }
 
@@ -60,12 +60,12 @@ export default function HomeScreen({
           <input
             value={nickname}
             onChange={(e) => setNickname(e.target.value)}
-            placeholder="닉네임 (2~12자)"
+            placeholder="Nickname (2–12 characters)"
             maxLength={12}
             className="w-full px-4 py-3 rounded-2xl bg-white border border-black/10 font-bold outline-none focus:ring-2 focus:ring-pink-300"
           />
           <div className="mt-2 text-xs text-slate-500">
-            랭킹에 표시될 이름이에요
+            This name will be displayed on the leaderboard.
           </div>
         </div>
 
