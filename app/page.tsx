@@ -8,6 +8,7 @@ import { supabase } from "./lib/supabaseClient";
 
 type CharId = "green" | "berry" | "sprinkle";
 type Phase = "home" | "game";
+type GameMode = "free" | "mission" | "timeAttack";
 
 type DbRow = {
   nickname_key: string;
@@ -62,6 +63,7 @@ function startOfTodayLocalISO() {
 export default function Page() {
   const [phase, setPhase] = useState<Phase>("home");
   const [character, setCharacter] = useState<CharId>("green");
+  const [gameMode, setGameMode] = useState<GameMode>("free");
   const [best, setBest] = useState(0);
   const [startSignal, setStartSignal] = useState(0);
 
@@ -239,8 +241,9 @@ export default function Page() {
       {phase === "home" && (
         <HomeScreen
           bestScore={best}
-          onStart={(char: CharId) => {
+          onStart={(char: CharId, mode: GameMode) => {
             setCharacter(char);
+            setGameMode(mode);
             setLastNick(localStorage.getItem("nickname") ?? undefined);
             setPhase("game");
             setStartSignal((n) => n + 1);
@@ -252,6 +255,7 @@ export default function Page() {
       {phase === "game" && (
         <Game
           character={character}
+          mode={gameMode}
           startSignal={startSignal}
           onExitToHome={() => setPhase("home")}
           onBestScore={(newBest: number) => {

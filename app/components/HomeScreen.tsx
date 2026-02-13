@@ -10,7 +10,7 @@ export default function HomeScreen({
   onOpenLeaderboard,
 }: {
   bestScore: number;
-  onStart: (char: CharId) => void;
+  onStart: (char: CharId, mode: "free" | "mission" | "timeAttack") => void;
   onOpenLeaderboard: () => void;
 }) {
   const [selectedChar, setSelectedChar] = useState<CharId>("green");
@@ -27,7 +27,7 @@ export default function HomeScreen({
     }
   }, [nickname]);
 
-  const handleStart = () => {
+  const handleStart = (mode: "free" | "mission" | "timeAttack") => {
     const nick = nickname.trim();
 
     if (nick.length < 2 || nick.length > 12) {
@@ -35,11 +35,7 @@ export default function HomeScreen({
       return;
     }
 
-    onStart(selectedChar);
-  };
-
-  const handleComingSoon = () => {
-    alert("Coming soon!");
+    onStart(selectedChar, mode);
   };
 
   return (
@@ -105,21 +101,21 @@ export default function HomeScreen({
           <div className="space-y-2">
             <button
               type="button"
-              onClick={handleStart}
+              onClick={() => handleStart("free")}
               className="w-full py-4 rounded-2xl bg-gradient-to-r from-pink-500 to-rose-500 text-white font-extrabold shadow-lg active:scale-95 transition"
             >
               Free Play
             </button>
             <button
               type="button"
-              onClick={handleComingSoon}
+              onClick={() => handleStart("mission")}
               className="w-full py-3 rounded-2xl bg-amber-50 text-amber-900 font-bold border border-amber-200 active:scale-95 transition"
             >
               Topping Mission
             </button>
             <button
               type="button"
-              onClick={handleComingSoon}
+              onClick={() => handleStart("timeAttack")}
               className="w-full py-3 rounded-2xl bg-sky-50 text-sky-900 font-bold border border-sky-200 active:scale-95 transition"
             >
               Custom Topping (Time Attack)

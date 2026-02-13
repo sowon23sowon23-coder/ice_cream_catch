@@ -1,11 +1,17 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 type CharId = "green" | "berry" | "sprinkle";
+type GameMode = "free" | "mission" | "timeAttack";
 
-type Ice = { id: number; x: number; y: number; v: number };
+const MISSION_TOPPINGS = ["🍒", "🍓", "🥄", "🫐", "🍫"] as const;
+type MissionTopping = (typeof MISSION_TOPPINGS)[number];
+type FallingEmoji = "🍨" | MissionTopping;
+
+type FallingItem = { id: number; x: number; y: number; v: number; emoji: FallingEmoji };
 type Pop = { id: number; x: number; y: number; text: string; born: number };
+
 const GAME_BG_CANDIDATES = [
   "/game-bg-1.jpg",
   "/game-bg-2.jpg",
@@ -14,30 +20,41 @@ const GAME_BG_CANDIDATES = [
   "/game-bg-1.png",
   "/game-bg-2.png",
 ] as const;
+
 const DEFAULT_GAME_BG =
   "radial-gradient(circle at 18% 18%, rgba(255,255,255,0.48), transparent 36%), linear-gradient(180deg, #99dcff 0%, #70c9ff 48%, #4ca6e8 100%)";
 
+function randomMissionTargets() {
+  const count = Math.floor(Math.random() * 4) + 2; // 2..5
+  const shuffled = [...MISSION_TOPPINGS].sort(() => Math.random() - 0.5);
+  return shuffled.slice(0, count);
+}
+
 export default function Game({
   character,
+  mode,
   startSignal,
   onExitToHome,
   onBestScore,
   onGameOver,
 }: {
   character: CharId;
+  mode: GameMode;
   startSignal: number;
   onExitToHome: () => void;
   onBestScore: (best: number) => void;
   onGameOver?: (finalScore: number) => void;
 }) {
   const [phase, setPhase] = useState<"idle" | "play" | "over">("idle");
-  const [countdown, setCountdown] = useState<"ready" | "go" | null>(null);
+  const [countdown, setCountdown] = useState<"mission" | "ready" | "go" | null>(null);
 
   const [score, setScore] = useState(0);
   const [lives, setLives] = useState(3);
+  const [timeLeft, setTimeLeft] = useState(30);
   const [playerX, setPlayerX] = useState(50);
+  const [missionTargets, setMissionTargets] = useState<MissionTopping[]>([]);
 
-  const [ices, setIces] = useState<Ice[]>([]);
+  const [items, setItems] = useState<FallingItem[]>([]);
   const [pops, setPops] = useState<Pop[]>([]);
 
   const [tilt, setTilt] = useState(0);
@@ -46,20 +63,19 @@ export default function Game({
   const [gameBg, setGameBg] = useState<string | null>(null);
 
   const areaRef = useRef<HTMLDivElement>(null);
-
   const idRef = useRef(0);
   const popIdRef = useRef(0);
   const lastLifeLossRef = useRef(0);
-
   const spawnRef = useRef<number | null>(null);
   const loopRef = useRef<number | null>(null);
-
   const playerXRef = useRef(50);
+  const gameOverFiredRef = useRef(false);
+
+  const missionSet = useMemo(() => new Set(missionTargets), [missionTargets]);
+
   useEffect(() => {
     playerXRef.current = playerX;
   }, [playerX]);
-
-  const gameOverFiredRef = useRef(false);
 
   useEffect(() => {
     let active = true;
@@ -96,25 +112,54 @@ export default function Game({
     }
   };
 
+  const finishGame = () => {
+    if (gameOverFiredRef.current) return;
+    gameOverFiredRef.current = true;
+
+    stopAll();
+    setPhase("over");
+
+    const best = Number(localStorage.getItem("bestScore") || 0);
+    if (score > best) {
+      localStorage.setItem("bestScore", String(score));
+      onBestScore(score);
+    }
+
+    onGameOver?.(score);
+  };
+
   const start = () => {
-    // reset refs
     idRef.current = 0;
     popIdRef.current = 0;
     lastLifeLossRef.current = 0;
     playerXRef.current = 50;
     gameOverFiredRef.current = false;
 
-    // reset state
     setScore(0);
     setLives(3);
+    setTimeLeft(30);
     setPlayerX(50);
-    setIces([]);
+    setItems([]);
     setPops([]);
     setTilt(0);
     setBounce(false);
     setShake(false);
 
-    // READY/GO 연출
+    if (mode === "mission") {
+      setMissionTargets(randomMissionTargets());
+      setCountdown("mission");
+      setPhase("idle");
+
+      window.setTimeout(() => setCountdown("ready"), 1400);
+      window.setTimeout(() => setCountdown("go"), 1850);
+      window.setTimeout(() => {
+        setCountdown(null);
+        setPhase("play");
+      }, 2300);
+      return;
+    }
+
+    setMissionTargets([]);
     setCountdown("ready");
     setPhase("idle");
 
@@ -125,7 +170,6 @@ export default function Game({
     }, 900);
   };
 
-  // ✅ 홈에서 Start 눌러서 game 진입하면 즉시 start
   useEffect(() => {
     if (!startSignal) return;
     start();
@@ -148,14 +192,12 @@ export default function Game({
     setTimeout(() => setBounce(false), 140);
   };
 
-  // ✅ (모바일 스크롤/뷰포트 움직임 방지) play 동안 body 스크롤 잠금
   useEffect(() => {
     if (phase !== "play") return;
     const prevOverflow = document.body.style.overflow;
     const prevTouchAction = document.body.style.touchAction;
 
     document.body.style.overflow = "hidden";
-    // 일부 브라우저에서 도움이 됨 (과하게 막고 싶지 않으면 지워도 됨)
     document.body.style.touchAction = "none";
 
     return () => {
@@ -164,44 +206,47 @@ export default function Game({
     };
   }, [phase]);
 
-  // ✅ (모바일 스크롤 방지 확실버전) passive:false + preventDefault 터치 리스너
   useEffect(() => {
     const el = areaRef.current;
     if (!el) return;
 
     const handler = (e: TouchEvent) => {
       if (phase !== "play") return;
-      // 페이지 스크롤/당겨서 새로고침 방지
       e.preventDefault();
       if (e.touches && e.touches.length > 0) move(e.touches[0].clientX);
     };
 
     el.addEventListener("touchmove", handler, { passive: false });
     return () => el.removeEventListener("touchmove", handler);
-  }, [phase]); // move는 내부에서 areaRef/current로 처리하므로 phase만 의존
+  }, [phase]);
 
-  // ✅ 게임오버 처리 (딱 1번만)
   useEffect(() => {
     if (phase !== "play") return;
+    if (mode === "timeAttack") return;
     if (lives > 0) return;
-    if (gameOverFiredRef.current) return;
-
-    gameOverFiredRef.current = true;
-
-    stopAll();
-    setPhase("over");
-
-    const best = Number(localStorage.getItem("bestScore") || 0);
-    if (score > best) {
-      localStorage.setItem("bestScore", String(score));
-      onBestScore(score);
-    }
-
-    onGameOver?.(score);
+    finishGame();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [lives, phase, score]);
+  }, [lives, mode, phase, score]);
 
-  // ✅ 스폰/루프
+  useEffect(() => {
+    if (phase !== "play") return;
+    if (mode !== "timeAttack") return;
+    if (timeLeft > 0) return;
+    finishGame();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mode, phase, timeLeft, score]);
+
+  useEffect(() => {
+    if (phase !== "play") return;
+    if (mode !== "timeAttack") return;
+
+    const timer = window.setInterval(() => {
+      setTimeLeft((t) => Math.max(0, t - 1));
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [mode, phase]);
+
   useEffect(() => {
     if (phase !== "play") {
       stopAll();
@@ -210,14 +255,14 @@ export default function Game({
     if (loopRef.current !== null) return;
 
     spawnRef.current = window.setInterval(() => {
-      setIces((v) => [
+      const emoji: FallingEmoji =
+        mode === "mission"
+          ? MISSION_TOPPINGS[Math.floor(Math.random() * MISSION_TOPPINGS.length)]
+          : "🍨";
+
+      setItems((v) => [
         ...v,
-        {
-          id: idRef.current++,
-          x: Math.random() * 90 + 5,
-          y: -5,
-          v: 1.2 + Math.random() * 2.4,
-        },
+        { id: idRef.current++, x: Math.random() * 90 + 5, y: -5, v: 1.2 + Math.random() * 2.4, emoji },
       ]);
     }, 900);
 
@@ -225,74 +270,91 @@ export default function Game({
       const now = performance.now();
       const px = playerXRef.current;
 
-      setIces((prev) => {
+      setItems((prev) => {
         let gained = 0;
-        let missed = 0;
+        let lifeLoss = 0;
         const popsToAdd: Pop[] = [];
-        const next: Ice[] = [];
+        const next: FallingItem[] = [];
 
-        for (const i of prev) {
-          const ny = i.y + i.v;
+        for (const item of prev) {
+          const ny = item.y + item.v;
+          const isMissionTarget = missionSet.has(item.emoji as MissionTopping);
 
-          // catch
-          if (Math.abs(i.x - px) < 8 && ny > 85) {
-            gained += 1;
-            popsToAdd.push({
-              id: popIdRef.current++,
-              x: i.x,
-              y: 88,
-              text: "+1",
-              born: now,
-            });
+          if (Math.abs(item.x - px) < 8 && ny > 85) {
+            if (mode === "mission") {
+              if (isMissionTarget) {
+                gained += 1;
+                popsToAdd.push({
+                  id: popIdRef.current++,
+                  x: item.x,
+                  y: 88,
+                  text: "+1",
+                  born: now,
+                });
+              } else {
+                lifeLoss += 1;
+                popsToAdd.push({
+                  id: popIdRef.current++,
+                  x: item.x,
+                  y: 88,
+                  text: "X",
+                  born: now,
+                });
+              }
+            } else {
+              gained += 1;
+              popsToAdd.push({
+                id: popIdRef.current++,
+                x: item.x,
+                y: 88,
+                text: "+1",
+                born: now,
+              });
+            }
             continue;
           }
 
-          // miss
           if (ny > 105) {
-            missed += 1;
+            if (mode === "mission") {
+              if (isMissionTarget) {
+                lifeLoss += 1;
+              }
+            } else {
+              if (mode !== "timeAttack") {
+                lifeLoss += 1;
+              }
+            }
             continue;
           }
 
-          next.push({ ...i, y: ny });
+          next.push({ ...item, y: ny });
         }
 
         if (gained) setScore((s) => s + gained);
 
-        if (missed) {
+        if (lifeLoss) {
           const now2 = performance.now();
           if (now2 - lastLifeLossRef.current >= 400) {
             lastLifeLossRef.current = now2;
-
-            // 💔 팝업
             setPops((ps) =>
               ps.concat([
-                {
-                  id: popIdRef.current++,
-                  x: playerXRef.current,
-                  y: 90,
-                  text: "💔",
-                  born: now2,
-                },
+                { id: popIdRef.current++, x: playerXRef.current, y: 90, text: "-1 life", born: now2 },
               ])
             );
-
-            // 화면 흔들림
             setShake(true);
             setTimeout(() => setShake(false), 180);
-
             setLives((l) => Math.max(0, l - 1));
           }
         }
 
         setPops((ps) => ps.concat(popsToAdd).filter((p) => now - p.born < 700));
-
         return next;
       });
     }, 30);
 
     return () => stopAll();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [phase]);
+  }, [phase, mode, missionSet]);
 
   return (
     <main className="min-h-[100dvh] bg-gradient-to-b from-pink-100 to-blue-100 flex items-center justify-center p-4">
@@ -341,22 +403,26 @@ export default function Game({
       `}</style>
 
       <div className="w-full max-w-md">
-        <div className="text-center mb-4 font-bold text-pink-600">
-          🍦 Score {score} &nbsp; ❤️ {lives}
+        <div className="text-center mb-3 font-bold text-pink-600">
+          {mode === "timeAttack" ? `Score ${score} | Time ${timeLeft}s` : `Score ${score} | Lives ${lives}`}
         </div>
+
+        {mode === "mission" && missionTargets.length > 0 && (
+          <div className="mb-3 rounded-2xl bg-amber-50 border border-amber-200 px-4 py-2 text-center text-sm font-bold text-amber-900">
+            Catch only: {missionTargets.join(" ")}
+          </div>
+        )}
 
         <div
           ref={areaRef}
           onMouseMove={(e) => phase === "play" && move(e.clientX)}
-          // onTouchMove는 제거: addEventListener로 passive:false 처리 중
           className={`relative aspect-[3/4] rounded-3xl overflow-hidden shadow-xl ring-1 ring-white/50 touch-none ${
             shake ? "animate-shake" : ""
           }`}
           style={{
-            backgroundImage:
-              gameBg
-                ? `linear-gradient(180deg, rgba(255,255,255,0.18), rgba(255,255,255,0.18)), url(${gameBg})`
-                : DEFAULT_GAME_BG,
+            backgroundImage: gameBg
+              ? `linear-gradient(180deg, rgba(255,255,255,0.18), rgba(255,255,255,0.18)), url(${gameBg})`
+              : DEFAULT_GAME_BG,
             backgroundSize: "cover",
             backgroundPosition: "center",
           }}
@@ -386,24 +452,30 @@ export default function Game({
 
           <div className="absolute inset-x-0 bottom-0 h-28 bg-gradient-to-t from-white/30 to-transparent pointer-events-none z-0" />
 
-          {/* READY / GO */}
           {countdown && (
             <div className="absolute inset-0 z-30 flex items-center justify-center">
-              <div className="px-8 py-4 rounded-3xl bg-white/75 backdrop-blur-md border border-black/5 shadow-2xl">
-                <div className="text-4xl font-black text-pink-600 text-center">
-                  {countdown === "ready" ? "READY" : "GO!"}
-                </div>
+              <div className="px-8 py-4 rounded-3xl bg-white/80 backdrop-blur-md border border-black/5 shadow-2xl text-center">
+                {countdown === "mission" ? (
+                  <>
+                    <div className="text-xs font-extrabold uppercase tracking-[0.16em] text-amber-700 mb-2">
+                      Topping Mission
+                    </div>
+                    <div className="text-3xl font-black text-amber-600">{missionTargets.join(" ")}</div>
+                  </>
+                ) : (
+                  <div className="text-4xl font-black text-pink-600">
+                    {countdown === "ready" ? "READY" : "GO!"}
+                  </div>
+                )}
               </div>
             </div>
           )}
 
-          {/* OVERLAY (idle/over) */}
           {phase !== "play" && (
             <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-white/55 backdrop-blur-sm">
-              <div className="text-5xl mb-3">{phase === "over" ? "😢" : "🍦"}</div>
-
+              <div className="text-5xl mb-3">{phase === "over" ? "💥" : "🍨"}</div>
               <div className="text-xl font-extrabold text-pink-600 mb-2">
-                {phase === "over" ? "Game Over!" : "Loading…"}
+                {phase === "over" ? "Game Over!" : "Loading..."}
               </div>
 
               <div className="mb-5 flex flex-col items-center">
@@ -418,8 +490,7 @@ export default function Game({
               {phase === "over" && (
                 <>
                   <div className="text-sm font-bold text-slate-700 mb-3">
-                    Your Score:{" "}
-                    <span className="font-black text-pink-600">{score}</span>
+                    Your Score: <span className="font-black text-pink-600">{score}</span>
                   </div>
 
                   <button
@@ -442,14 +513,16 @@ export default function Game({
             </div>
           )}
 
-          {/* FALLING */}
-          {ices.map((i) => (
-            <div key={i.id} style={{ left: `${i.x}%`, top: `${i.y}%` }} className="absolute text-4xl">
-              🍦
+          {items.map((item) => (
+            <div
+              key={item.id}
+              style={{ left: `${item.x}%`, top: `${item.y}%` }}
+              className="absolute text-4xl"
+            >
+              {item.emoji}
             </div>
           ))}
 
-          {/* POPS */}
           {pops.map((p) => {
             const age = (performance.now() - p.born) / 1000;
             const opacity = Math.max(0, 1 - age / 0.7);
@@ -473,16 +546,10 @@ export default function Game({
             );
           })}
 
-          {/* PLAYER */}
           {phase === "play" && (
             <div
               className="absolute bottom-0"
-              style={{
-                left: `${playerX}%`,
-                transform: "translateX(-50%)",
-                width: 96,
-                height: 96,
-              }}
+              style={{ left: `${playerX}%`, transform: "translateX(-50%)", width: 96, height: 96 }}
             >
               <img
                 src={`/${character}.png`}
