@@ -23,6 +23,8 @@ const GAME_BG_CANDIDATES = [
 
 const DEFAULT_GAME_BG =
   "radial-gradient(circle at 18% 18%, rgba(255,255,255,0.48), transparent 36%), linear-gradient(180deg, #99dcff 0%, #70c9ff 48%, #4ca6e8 100%)";
+const FREE_DIFFICULTY_STEP = 20;
+const FREE_SPEED_PER_LEVEL = 0.15;
 
 function randomMissionTargets() {
   const count = Math.floor(Math.random() * 4) + 2; // 2..5
@@ -51,6 +53,8 @@ export default function Game({
   const [score, setScore] = useState(0);
   const [lives, setLives] = useState(3);
   const [timeLeft, setTimeLeft] = useState(30);
+  const [difficultyLevel, setDifficultyLevel] = useState(0);
+  const [difficultyNotice, setDifficultyNotice] = useState<string | null>(null);
   const [playerX, setPlayerX] = useState(50);
   const [missionTargets, setMissionTargets] = useState<MissionTopping[]>([]);
 
@@ -68,14 +72,29 @@ export default function Game({
   const lastLifeLossRef = useRef(0);
   const spawnRef = useRef<number | null>(null);
   const loopRef = useRef<number | null>(null);
+  const noticeTimeoutRef = useRef<number | null>(null);
   const playerXRef = useRef(50);
   const gameOverFiredRef = useRef(false);
+  const difficultyLevelRef = useRef(0);
 
   const missionSet = useMemo(() => new Set(missionTargets), [missionTargets]);
 
   useEffect(() => {
     playerXRef.current = playerX;
   }, [playerX]);
+
+  useEffect(() => {
+    difficultyLevelRef.current = difficultyLevel;
+  }, [difficultyLevel]);
+
+  useEffect(
+    () => () => {
+      if (noticeTimeoutRef.current !== null) {
+        clearTimeout(noticeTimeoutRef.current);
+      }
+    },
+    []
+  );
 
   useEffect(() => {
     let active = true;
@@ -138,12 +157,19 @@ export default function Game({
     setScore(0);
     setLives(3);
     setTimeLeft(30);
+    setDifficultyLevel(0);
+    setDifficultyNotice(null);
     setPlayerX(50);
     setItems([]);
     setPops([]);
     setTilt(0);
     setBounce(false);
     setShake(false);
+    difficultyLevelRef.current = 0;
+    if (noticeTimeoutRef.current !== null) {
+      clearTimeout(noticeTimeoutRef.current);
+      noticeTimeoutRef.current = null;
+    }
 
     if (mode === "mission") {
       setMissionTargets(randomMissionTargets());
@@ -175,6 +201,24 @@ export default function Game({
     start();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [startSignal]);
+
+  useEffect(() => {
+    if (mode !== "free" || phase !== "play") return;
+    const nextLevel = Math.floor(score / FREE_DIFFICULTY_STEP);
+    if (nextLevel <= difficultyLevelRef.current) return;
+
+    difficultyLevelRef.current = nextLevel;
+    setDifficultyLevel(nextLevel);
+    setDifficultyNotice(`Difficulty Up! Lv.${nextLevel}`);
+
+    if (noticeTimeoutRef.current !== null) {
+      clearTimeout(noticeTimeoutRef.current);
+    }
+    noticeTimeoutRef.current = window.setTimeout(() => {
+      setDifficultyNotice(null);
+      noticeTimeoutRef.current = null;
+    }, 1400);
+  }, [mode, phase, score]);
 
   const PLAYER_W = 80;
 
@@ -277,7 +321,9 @@ export default function Game({
         const next: FallingItem[] = [];
 
         for (const item of prev) {
-          const ny = item.y + item.v;
+          const speedMultiplier =
+            mode === "free" ? 1 + difficultyLevelRef.current * FREE_SPEED_PER_LEVEL : 1;
+          const ny = item.y + item.v * speedMultiplier;
           const isMissionTarget = missionSet.has(item.emoji as MissionTopping);
 
           if (Math.abs(item.x - px) < 8 && ny > 85) {
@@ -404,7 +450,11 @@ export default function Game({
 
       <div className="w-full max-w-md">
         <div className="text-center mb-3 font-bold text-pink-600">
-          {mode === "timeAttack" ? `Score ${score} | Time ${timeLeft}s` : `Score ${score} | Lives ${lives}`}
+          {mode === "timeAttack"
+            ? `Score ${score} | Time ${timeLeft}s`
+            : mode === "free"
+              ? `Score ${score} | Lives ${lives} | Lv ${difficultyLevel}`
+              : `Score ${score} | Lives ${lives}`}
         </div>
 
         {mode === "mission" && missionTargets.length > 0 && (
@@ -451,6 +501,12 @@ export default function Game({
           </div>
 
           <div className="absolute inset-x-0 bottom-0 h-28 bg-gradient-to-t from-white/30 to-transparent pointer-events-none z-0" />
+
+          {mode === "free" && phase === "play" && difficultyNotice && (
+            <div className="absolute top-4 left-1/2 -translate-x-1/2 z-30 rounded-full bg-fuchsia-600/90 text-white text-xs font-extrabold px-4 py-2 shadow-lg">
+              {difficultyNotice}
+            </div>
+          )}
 
           {countdown && (
             <div className="absolute inset-0 z-30 flex items-center justify-center">
