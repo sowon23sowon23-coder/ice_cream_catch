@@ -55,6 +55,7 @@ export default function Game({
   const [timeLeft, setTimeLeft] = useState(30);
   const [difficultyLevel, setDifficultyLevel] = useState(0);
   const [difficultyNotice, setDifficultyNotice] = useState<string | null>(null);
+  const [shareNotice, setShareNotice] = useState<string | null>(null);
   const [playerX, setPlayerX] = useState(50);
   const [missionTargets, setMissionTargets] = useState<MissionTopping[]>([]);
 
@@ -159,6 +160,7 @@ export default function Game({
     setTimeLeft(30);
     setDifficultyLevel(0);
     setDifficultyNotice(null);
+    setShareNotice(null);
     setPlayerX(50);
     setItems([]);
     setPops([]);
@@ -221,6 +223,31 @@ export default function Game({
   }, [mode, phase, score]);
 
   const PLAYER_W = 80;
+
+  const handleShare = async () => {
+    const url = window.location.href;
+    const title = "Ice Cream Catcher";
+    const text = `I scored ${score} points in Ice Cream Catcher! Try it here:`;
+
+    try {
+      if (navigator.share) {
+        await navigator.share({ title, text, url });
+        setShareNotice("Shared successfully.");
+        return;
+      }
+
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(url);
+        setShareNotice("Game link copied.");
+        return;
+      }
+
+      setShareNotice("Copy this link and share it.");
+      window.prompt("Copy this link:", url);
+    } catch {
+      setShareNotice("Share canceled.");
+    }
+  };
 
   const move = (clientX: number) => {
     const r = areaRef.current?.getBoundingClientRect();
@@ -556,6 +583,18 @@ export default function Game({
                   >
                     Retry
                   </button>
+
+                  <button
+                    type="button"
+                    onClick={handleShare}
+                    className="mt-3 px-8 py-3 rounded-full bg-sky-500 text-white font-extrabold shadow-lg active:scale-95 transition"
+                  >
+                    Share With Friends
+                  </button>
+
+                  {shareNotice && (
+                    <div className="mt-2 text-xs font-bold text-slate-700">{shareNotice}</div>
+                  )}
 
                   <button
                     type="button"
