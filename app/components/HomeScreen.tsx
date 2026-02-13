@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useState } from "react";
 
@@ -16,13 +16,11 @@ export default function HomeScreen({
   const [selectedChar, setSelectedChar] = useState<CharId>("green");
   const [nickname, setNickname] = useState("");
 
-  // ✅ 닉네임 로컬스토리지에서 불러오기
   useEffect(() => {
     const saved = localStorage.getItem("nickname");
     if (saved) setNickname(saved);
   }, []);
 
-  // ✅ 닉네임 변경 시 자동 저장
   useEffect(() => {
     if (nickname.trim()) {
       localStorage.setItem("nickname", nickname.trim());
@@ -40,40 +38,34 @@ export default function HomeScreen({
     onStart(selectedChar);
   };
 
+  const handleComingSoon = () => {
+    alert("Coming soon!");
+  };
+
   return (
     <main className="min-h-screen bg-gradient-to-b from-pink-100 to-blue-100 flex items-center justify-center p-4">
       <div className="w-full max-w-md rounded-3xl bg-white/70 backdrop-blur-xl shadow-xl p-6">
-        {/* 타이틀 */}
         <div className="text-center mb-6">
-          <div className="text-4xl mb-2">🍦</div>
-          <h1 className="text-2xl font-black text-pink-600">
-            Ice Cream Catcher
-          </h1>
+          <div className="text-4xl mb-2">🍨</div>
+          <h1 className="text-2xl font-black text-pink-600">Ice Cream Catcher</h1>
           <div className="mt-1 text-sm text-slate-600">
-            Best Score:{" "}
-            <span className="font-extrabold text-pink-600">{bestScore}</span>
+            Best Score: <span className="font-extrabold text-pink-600">{bestScore}</span>
           </div>
         </div>
 
-        {/* 닉네임 입력 */}
         <div className="mb-5">
           <input
             value={nickname}
             onChange={(e) => setNickname(e.target.value)}
-            placeholder="Nickname (2–12 characters)"
+            placeholder="Nickname (2-12 characters)"
             maxLength={12}
             className="w-full px-4 py-3 rounded-2xl bg-white border border-black/10 font-bold outline-none focus:ring-2 focus:ring-pink-300"
           />
-          <div className="mt-2 text-xs text-slate-500">
-            This name will be displayed on the leaderboard.
-          </div>
+          <div className="mt-2 text-xs text-slate-500">This name will be displayed on the leaderboard.</div>
         </div>
 
-        {/* 캐릭터 선택 */}
         <div className="mb-6">
-          <div className="text-sm font-extrabold text-slate-700 mb-3 text-center">
-            Choose your character
-          </div>
+          <div className="text-sm font-extrabold text-slate-700 mb-3 text-center">Choose your character</div>
           <div className="flex justify-center gap-4">
             {(["green", "berry", "sprinkle"] as CharId[]).map((c) => (
               <button
@@ -81,9 +73,7 @@ export default function HomeScreen({
                 type="button"
                 onClick={() => setSelectedChar(c)}
                 className={`rounded-2xl p-2 transition active:scale-95 ${
-                  selectedChar === c
-                    ? "ring-4 ring-pink-400 bg-white scale-110"
-                    : "bg-white/80"
+                  selectedChar === c ? "ring-4 ring-pink-400 bg-white scale-110" : "bg-white/80"
                 }`}
               >
                 <img
@@ -97,16 +87,33 @@ export default function HomeScreen({
           </div>
         </div>
 
-        {/* START 버튼 */}
-        <button
-          type="button"
-          onClick={handleStart}
-          className="w-full py-4 rounded-full bg-pink-500 text-white font-extrabold shadow-lg active:scale-95 transition"
-        >
-          START
-        </button>
+        <div className="mb-2">
+          <div className="text-sm font-extrabold text-slate-700 mb-3 text-center">Select Game Mode</div>
+          <div className="space-y-2">
+            <button
+              type="button"
+              onClick={handleStart}
+              className="w-full py-4 rounded-full bg-pink-500 text-white font-extrabold shadow-lg active:scale-95 transition"
+            >
+              Free Play
+            </button>
+            <button
+              type="button"
+              onClick={handleComingSoon}
+              className="w-full py-3 rounded-full bg-amber-100 text-amber-900 font-bold border border-amber-300 active:scale-95 transition"
+            >
+              Topping Mission
+            </button>
+            <button
+              type="button"
+              onClick={handleComingSoon}
+              className="w-full py-3 rounded-full bg-sky-100 text-sky-900 font-bold border border-sky-300 active:scale-95 transition"
+            >
+              Custom Topping (Time Attack)
+            </button>
+          </div>
+        </div>
 
-        {/* 랭킹 버튼 */}
         <button
           type="button"
           onClick={onOpenLeaderboard}
