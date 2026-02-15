@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 
 type CharId = "green" | "berry" | "sprinkle";
 type GameMode = "free" | "mission" | "timeAttack";
@@ -56,6 +56,7 @@ export default function Game({
   const [difficultyLevel, setDifficultyLevel] = useState(0);
   const [difficultyNotice, setDifficultyNotice] = useState<string | null>(null);
   const [fanfareNotice, setFanfareNotice] = useState(false);
+  const [fireworkSeed, setFireworkSeed] = useState(0);
   const [shareNotice, setShareNotice] = useState<string | null>(null);
   const [playerX, setPlayerX] = useState(50);
   const [missionTargets, setMissionTargets] = useState<MissionTopping[]>([]);
@@ -80,8 +81,30 @@ export default function Game({
   const gameOverFiredRef = useRef(false);
   const difficultyLevelRef = useRef(0);
   const fanfareShownRef = useRef(false);
+  const pausedRef = useRef(false);
 
   const missionSet = useMemo(() => new Set(missionTargets), [missionTargets]);
+  const isPaused = phase === "play" && fanfareNotice;
+  const fireworkPieces = useMemo(() => {
+    return Array.from({ length: 26 }, (_, i) => {
+      const angle = (Math.PI * 2 * i) / 26 + Math.random() * 0.2;
+      const distance = 72 + Math.random() * 110;
+      const tx = Math.cos(angle) * distance;
+      const ty = Math.sin(angle) * distance;
+      const hue = Math.floor(Math.random() * 360);
+      const delay = Math.random() * 0.25;
+      const size = 6 + Math.random() * 8;
+
+      return {
+        id: i,
+        tx,
+        ty,
+        delay,
+        size,
+        color: `hsl(${hue} 100% 60%)`,
+      };
+    });
+  }, [fireworkSeed]);
 
   useEffect(() => {
     playerXRef.current = playerX;
@@ -90,6 +113,10 @@ export default function Game({
   useEffect(() => {
     difficultyLevelRef.current = difficultyLevel;
   }, [difficultyLevel]);
+
+  useEffect(() => {
+    pausedRef.current = isPaused;
+  }, [isPaused]);
 
   useEffect(
     () => () => {
@@ -239,6 +266,7 @@ export default function Game({
     if (score < 10 || fanfareShownRef.current) return;
 
     fanfareShownRef.current = true;
+    setFireworkSeed((n) => n + 1);
     setFanfareNotice(true);
     if (fanfareTimeoutRef.current !== null) {
       clearTimeout(fanfareTimeoutRef.current);
@@ -277,6 +305,7 @@ export default function Game({
   };
 
   const move = (clientX: number) => {
+    if (isPaused) return;
     const r = areaRef.current?.getBoundingClientRect();
     if (!r) return;
 
@@ -302,21 +331,21 @@ export default function Game({
       document.body.style.overflow = prevOverflow;
       document.body.style.touchAction = prevTouchAction;
     };
-  }, [phase]);
+  }, [phase, isPaused]);
 
   useEffect(() => {
     const el = areaRef.current;
     if (!el) return;
 
     const handler = (e: TouchEvent) => {
-      if (phase !== "play") return;
+      if (phase !== "play" || isPaused) return;
       e.preventDefault();
       if (e.touches && e.touches.length > 0) move(e.touches[0].clientX);
     };
 
     el.addEventListener("touchmove", handler, { passive: false });
     return () => el.removeEventListener("touchmove", handler);
-  }, [phase]);
+  }, [phase, isPaused]);
 
   useEffect(() => {
     if (phase !== "play") return;
@@ -353,6 +382,7 @@ export default function Game({
     if (loopRef.current !== null) return;
 
     spawnRef.current = window.setInterval(() => {
+      if (pausedRef.current) return;
       const emoji: FallingEmoji =
         mode === "mission"
           ? MISSION_TOPPINGS[Math.floor(Math.random() * MISSION_TOPPINGS.length)]
@@ -365,6 +395,7 @@ export default function Game({
     }, 900);
 
     loopRef.current = window.setInterval(() => {
+      if (pausedRef.current) return;
       const now = performance.now();
       const px = playerXRef.current;
 
@@ -500,6 +531,22 @@ export default function Game({
           animation-timing-function: linear;
           animation-iteration-count: infinite;
         }
+        @keyframes fireworkBurst {
+          0% {
+            transform: translate3d(0, 0, 0) scale(0.25);
+            opacity: 0;
+          }
+          15% {
+            opacity: 1;
+          }
+          100% {
+            transform: translate3d(var(--tx), var(--ty), 0) scale(1);
+            opacity: 0;
+          }
+        }
+        .firework-piece {
+          animation: fireworkBurst 900ms ease-out forwards;
+        }
       `}</style>
 
       <div className="w-full max-w-md">
@@ -564,9 +611,28 @@ export default function Game({
 
           {mode === "free" && phase === "play" && fanfareNotice && (
             <div className="absolute inset-0 z-30 flex items-center justify-center pointer-events-none">
+              <div className="absolute inset-0 bg-white/15 backdrop-blur-[1px]" />
+              {fireworkPieces.map((piece) => (
+                <span
+                  key={`${fireworkSeed}-${piece.id}`}
+                  className="firework-piece absolute left-1/2 top-1/2 rounded-full"
+                  style={
+                    {
+                      width: `${piece.size}px`,
+                      height: `${piece.size}px`,
+                      backgroundColor: piece.color,
+                      boxShadow: `0 0 10px ${piece.color}`,
+                      animationDelay: `${piece.delay}s`,
+                      "--tx": `${piece.tx}px`,
+                      "--ty": `${piece.ty}px`,
+                    } as CSSProperties
+                  }
+                />
+              ))}
               <div className="rounded-3xl bg-amber-300/95 text-amber-950 px-8 py-5 shadow-2xl text-center border-2 border-white/60">
                 <div className="text-2xl font-black tracking-wide">Fanfare!</div>
                 <div className="mt-1 text-sm font-extrabold">Free Play 10 Points!</div>
+                <div className="mt-1 text-xs font-bold">Paused</div>
               </div>
             </div>
           )}
