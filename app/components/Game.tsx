@@ -55,6 +55,7 @@ export default function Game({
   const [timeLeft, setTimeLeft] = useState(30);
   const [difficultyLevel, setDifficultyLevel] = useState(0);
   const [difficultyNotice, setDifficultyNotice] = useState<string | null>(null);
+  const [fanfareNotice, setFanfareNotice] = useState(false);
   const [shareNotice, setShareNotice] = useState<string | null>(null);
   const [playerX, setPlayerX] = useState(50);
   const [missionTargets, setMissionTargets] = useState<MissionTopping[]>([]);
@@ -74,9 +75,11 @@ export default function Game({
   const spawnRef = useRef<number | null>(null);
   const loopRef = useRef<number | null>(null);
   const noticeTimeoutRef = useRef<number | null>(null);
+  const fanfareTimeoutRef = useRef<number | null>(null);
   const playerXRef = useRef(50);
   const gameOverFiredRef = useRef(false);
   const difficultyLevelRef = useRef(0);
+  const fanfareShownRef = useRef(false);
 
   const missionSet = useMemo(() => new Set(missionTargets), [missionTargets]);
 
@@ -92,6 +95,9 @@ export default function Game({
     () => () => {
       if (noticeTimeoutRef.current !== null) {
         clearTimeout(noticeTimeoutRef.current);
+      }
+      if (fanfareTimeoutRef.current !== null) {
+        clearTimeout(fanfareTimeoutRef.current);
       }
     },
     []
@@ -160,6 +166,7 @@ export default function Game({
     setTimeLeft(30);
     setDifficultyLevel(0);
     setDifficultyNotice(null);
+    setFanfareNotice(false);
     setShareNotice(null);
     setPlayerX(50);
     setItems([]);
@@ -172,6 +179,11 @@ export default function Game({
       clearTimeout(noticeTimeoutRef.current);
       noticeTimeoutRef.current = null;
     }
+    if (fanfareTimeoutRef.current !== null) {
+      clearTimeout(fanfareTimeoutRef.current);
+      fanfareTimeoutRef.current = null;
+    }
+    fanfareShownRef.current = false;
 
     if (mode === "mission") {
       setMissionTargets(randomMissionTargets());
@@ -220,6 +232,21 @@ export default function Game({
       setDifficultyNotice(null);
       noticeTimeoutRef.current = null;
     }, 1400);
+  }, [mode, phase, score]);
+
+  useEffect(() => {
+    if (mode !== "free" || phase !== "play") return;
+    if (score < 10 || fanfareShownRef.current) return;
+
+    fanfareShownRef.current = true;
+    setFanfareNotice(true);
+    if (fanfareTimeoutRef.current !== null) {
+      clearTimeout(fanfareTimeoutRef.current);
+    }
+    fanfareTimeoutRef.current = window.setTimeout(() => {
+      setFanfareNotice(false);
+      fanfareTimeoutRef.current = null;
+    }, 1800);
   }, [mode, phase, score]);
 
   const PLAYER_W = 80;
@@ -532,6 +559,15 @@ export default function Game({
           {mode === "free" && phase === "play" && difficultyNotice && (
             <div className="absolute top-4 left-1/2 -translate-x-1/2 z-30 rounded-full bg-fuchsia-600/90 text-white text-xs font-extrabold px-4 py-2 shadow-lg">
               {difficultyNotice}
+            </div>
+          )}
+
+          {mode === "free" && phase === "play" && fanfareNotice && (
+            <div className="absolute inset-0 z-30 flex items-center justify-center pointer-events-none">
+              <div className="rounded-3xl bg-amber-300/95 text-amber-950 px-8 py-5 shadow-2xl text-center border-2 border-white/60">
+                <div className="text-2xl font-black tracking-wide">Fanfare!</div>
+                <div className="mt-1 text-sm font-extrabold">Free Play 10 Points!</div>
+              </div>
             </div>
           )}
 
