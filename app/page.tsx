@@ -85,8 +85,6 @@ function startOfTodayLocalISO() {
 }
 
 export default function Page() {
-  const BASE_WIDTH = 390;
-  const BASE_HEIGHT = 844;
   const [phase, setPhase] = useState<Phase>("home");
   const [character, setCharacter] = useState<CharId>("green");
   const [gameMode, setGameMode] = useState<GameMode>("free");
@@ -103,7 +101,6 @@ export default function Page() {
   const [lastScore, setLastScore] = useState<number | undefined>(undefined);
   const [lastNick, setLastNick] = useState<string | undefined>(undefined);
   const [myRank, setMyRank] = useState<number | undefined>(undefined);
-  const [frameScale, setFrameScale] = useState(1);
 
   useEffect(() => {
     const b = Number(localStorage.getItem("bestScore") || 0);
@@ -118,19 +115,6 @@ export default function Page() {
   useEffect(() => {
     localStorage.setItem("selectedStore", selectedStore);
   }, [selectedStore]);
-
-  useEffect(() => {
-    const updateScale = () => {
-      const pad = 16;
-      const sx = (window.innerWidth - pad) / BASE_WIDTH;
-      const sy = (window.innerHeight - pad) / BASE_HEIGHT;
-      setFrameScale(Math.min(1, Math.max(0.2, Math.min(sx, sy))));
-    };
-
-    updateScale();
-    window.addEventListener("resize", updateScale);
-    return () => window.removeEventListener("resize", updateScale);
-  }, []);
 
   const fetchTop20 = async (m: LeaderMode, store: string) => {
     setLbLoading(true);
@@ -381,15 +365,13 @@ export default function Page() {
 
   return (
     <>
-      <main className="fixed inset-0 overflow-hidden bg-[radial-gradient(circle_at_15%_5%,#ffffff_0%,#ffeef8_35%,#f8d5e8_100%)]">
-        <div className="h-full w-full flex items-center justify-center">
+      <main className="min-h-screen overflow-auto bg-[radial-gradient(circle_at_15%_5%,#ffffff_0%,#ffeef8_35%,#f8d5e8_100%)] p-4">
+        <div className="mx-auto flex w-full max-w-[390px] items-center justify-center">
           <div
             className="relative overflow-hidden rounded-[2rem] bg-white/95 shadow-[0_22px_60px_rgba(150,9,83,0.28)] ring-1 ring-[#f4c2db]"
             style={{
-              width: BASE_WIDTH,
-              height: BASE_HEIGHT,
-              transform: `scale(${frameScale})`,
-              transformOrigin: "center center",
+              width: "100%",
+              minHeight: 844,
             }}
           >
             {phase === "home" && (
