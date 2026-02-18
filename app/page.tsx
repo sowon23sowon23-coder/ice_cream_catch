@@ -1,6 +1,7 @@
 ﻿"use client";
 
 import { useEffect, useState } from "react";
+import { trackEvent } from "./lib/gtag";
 import HomeScreen from "./components/HomeScreen";
 import Game from "./components/Game";
 import LeaderboardModal, { LeaderMode, LeaderRow } from "./components/LeaderboardModal";
@@ -186,6 +187,7 @@ export default function Page() {
   };
 
   const openLeaderboard = async () => {
+    trackEvent({ action: "leaderboard_open", category: "engagement" });
     const nick = (localStorage.getItem("nickname") || "").trim();
     setLastNick(nick || undefined);
 

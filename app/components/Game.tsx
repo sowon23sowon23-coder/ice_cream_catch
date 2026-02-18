@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import { trackEvent } from "../lib/gtag";
 
 type CharId = "green" | "berry" | "sprinkle";
 type GameMode = "free" | "mission" | "timeAttack";
@@ -171,11 +172,13 @@ export default function Game({
 
     stopAll();
     setPhase("over");
+    trackEvent({ action: "game_over", category: "game", label: mode, value: score });
 
     const best = Number(localStorage.getItem("bestScore") || 0);
     if (score > best) {
       localStorage.setItem("bestScore", String(score));
       onBestScore(score);
+      trackEvent({ action: "new_best_score", category: "game", label: mode, value: score });
     }
 
     onGameOver?.(score);
@@ -211,6 +214,8 @@ export default function Game({
       fanfareTimeoutRef.current = null;
     }
     nextFanfareScoreRef.current = 20;
+
+    trackEvent({ action: "game_start", category: "game", label: mode, value: 0 });
 
     if (mode === "mission") {
       setMissionTargets(randomMissionTargets());
@@ -268,6 +273,7 @@ export default function Game({
     while (score >= nextFanfareScoreRef.current) {
       nextFanfareScoreRef.current += 20;
     }
+    trackEvent({ action: "fanfare_reached", category: "game", label: `score_${score}`, value: score });
     setFireworkSeed((n) => n + 1);
     setFanfareNotice(true);
     if (fanfareTimeoutRef.current !== null) {
@@ -285,6 +291,8 @@ export default function Game({
     const url = window.location.href;
     const title = "Ice Cream Catcher";
     const text = `I scored ${score} points in Ice Cream Catcher! Try it here:`;
+
+    trackEvent({ action: "share_click", category: "engagement", label: `score_${score}`, value: score });
 
     try {
       if (navigator.share) {

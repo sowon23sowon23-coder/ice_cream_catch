@@ -1,6 +1,7 @@
 ﻿"use client";
 
 import { useEffect, useState } from "react";
+import { trackEvent } from "../lib/gtag";
 
 export type CharId = "green" | "berry" | "sprinkle";
 
@@ -35,6 +36,8 @@ export default function HomeScreen({
       return;
     }
 
+    trackEvent({ action: "mode_select", category: "engagement", label: mode });
+    trackEvent({ action: "character_select", category: "engagement", label: selectedChar });
     onStart(selectedChar, mode);
   };
 
