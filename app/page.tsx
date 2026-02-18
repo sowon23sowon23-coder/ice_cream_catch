@@ -61,6 +61,8 @@ function startOfTodayLocalISO() {
 }
 
 export default function Page() {
+  const BASE_WIDTH = 390;
+  const BASE_HEIGHT = 844;
   const [phase, setPhase] = useState<Phase>("home");
   const [character, setCharacter] = useState<CharId>("green");
   const [gameMode, setGameMode] = useState<GameMode>("free");
@@ -76,12 +78,26 @@ export default function Page() {
   const [lastScore, setLastScore] = useState<number | undefined>(undefined);
   const [lastNick, setLastNick] = useState<string | undefined>(undefined);
   const [myRank, setMyRank] = useState<number | undefined>(undefined);
+  const [frameScale, setFrameScale] = useState(1);
 
   useEffect(() => {
     const b = Number(localStorage.getItem("bestScore") || 0);
     setBest(b);
     setLastNick(localStorage.getItem("nickname") ?? undefined);
   }, [phase]);
+
+  useEffect(() => {
+    const updateScale = () => {
+      const pad = 16;
+      const sx = (window.innerWidth - pad) / BASE_WIDTH;
+      const sy = (window.innerHeight - pad) / BASE_HEIGHT;
+      setFrameScale(Math.min(1, Math.max(0.2, Math.min(sx, sy))));
+    };
+
+    updateScale();
+    window.addEventListener("resize", updateScale);
+    return () => window.removeEventListener("resize", updateScale);
+  }, []);
 
   const fetchTop20 = async (m: LeaderMode) => {
     setLbLoading(true);
@@ -238,48 +254,62 @@ export default function Page() {
 
   return (
     <>
-      {phase === "home" && (
-        <HomeScreen
-          bestScore={best}
-          onStart={(char: CharId, mode: GameMode) => {
-            setCharacter(char);
-            setGameMode(mode);
-            setLastNick(localStorage.getItem("nickname") ?? undefined);
-            setPhase("game");
-            setStartSignal((n) => n + 1);
-          }}
-          onOpenLeaderboard={openLeaderboard}
-        />
-      )}
+      <main className="fixed inset-0 overflow-hidden bg-slate-100">
+        <div className="h-full w-full flex items-center justify-center">
+          <div
+            className="relative overflow-hidden rounded-[2rem] bg-white shadow-[0_18px_56px_rgba(15,23,42,0.3)] ring-1 ring-black/10"
+            style={{
+              width: BASE_WIDTH,
+              height: BASE_HEIGHT,
+              transform: `scale(${frameScale})`,
+              transformOrigin: "center center",
+            }}
+          >
+            {phase === "home" && (
+              <HomeScreen
+                bestScore={best}
+                onStart={(char: CharId, mode: GameMode) => {
+                  setCharacter(char);
+                  setGameMode(mode);
+                  setLastNick(localStorage.getItem("nickname") ?? undefined);
+                  setPhase("game");
+                  setStartSignal((n) => n + 1);
+                }}
+                onOpenLeaderboard={openLeaderboard}
+              />
+            )}
 
-      {phase === "game" && (
-        <Game
-          character={character}
-          mode={gameMode}
-          startSignal={startSignal}
-          onExitToHome={() => setPhase("home")}
-          onBestScore={(newBest: number) => {
-            setBest(newBest);
-            localStorage.setItem("bestScore", String(newBest));
-          }}
-          onGameOver={async (finalScore: number) => {
-            const nick = (localStorage.getItem("nickname") || "").trim();
+            {phase === "game" && (
+              <Game
+                character={character}
+                mode={gameMode}
+                startSignal={startSignal}
+                onExitToHome={() => setPhase("home")}
+                onBestScore={(newBest: number) => {
+                  setBest(newBest);
+                  localStorage.setItem("bestScore", String(newBest));
+                }}
+                onGameOver={async (finalScore: number) => {
+                  const nick = (localStorage.getItem("nickname") || "").trim();
 
-            setLastNick(nick || undefined);
-            setLastScore(finalScore);
+                  setLastNick(nick || undefined);
+                  setLastScore(finalScore);
 
-            if (nick.length >= 2 && nick.length <= 12) {
-              await upsertBestScore(nick, finalScore, character);
-              await calcMyRank(mode, finalScore);
-            } else {
-              setMyRank(undefined);
-            }
+                  if (nick.length >= 2 && nick.length <= 12) {
+                    await upsertBestScore(nick, finalScore, character);
+                    await calcMyRank(mode, finalScore);
+                  } else {
+                    setMyRank(undefined);
+                  }
 
-            await fetchTop20(mode);
-            setLbOpen(true);
-          }}
-        />
-      )}
+                  await fetchTop20(mode);
+                  setLbOpen(true);
+                }}
+              />
+            )}
+          </div>
+        </div>
+      </main>
 
       <LeaderboardModal
         open={lbOpen}

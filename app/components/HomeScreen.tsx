@@ -39,7 +39,7 @@ export default function HomeScreen({
   };
 
   return (
-    <main className="min-h-screen bg-[radial-gradient(circle_at_20%_10%,#ffe9f3_0%,transparent_36%),radial-gradient(circle_at_85%_18%,#dff4ff_0%,transparent_40%),linear-gradient(180deg,#fff6fb_0%,#eef8ff_54%,#e8f4ff_100%)] flex items-center justify-center p-4 sm:p-6">
+    <main className="h-full min-h-full bg-[radial-gradient(circle_at_20%_10%,#ffe9f3_0%,transparent_36%),radial-gradient(circle_at_85%_18%,#dff4ff_0%,transparent_40%),linear-gradient(180deg,#fff6fb_0%,#eef8ff_54%,#e8f4ff_100%)] flex items-center justify-center p-4 sm:p-6">
       <div className="w-full max-w-md rounded-[2rem] border border-white/70 bg-white/80 backdrop-blur-2xl shadow-[0_16px_48px_rgba(17,24,39,0.18)] p-5 sm:p-6">
         <div className="mb-5 rounded-3xl bg-gradient-to-r from-pink-500 to-rose-400 text-white p-5 shadow-lg">
           <div className="flex items-start justify-between">

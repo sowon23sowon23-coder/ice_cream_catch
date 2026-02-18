@@ -80,7 +80,7 @@ export default function Game({
   const playerXRef = useRef(50);
   const gameOverFiredRef = useRef(false);
   const difficultyLevelRef = useRef(0);
-  const fanfareShownRef = useRef(false);
+  const nextFanfareScoreRef = useRef(20);
   const pausedRef = useRef(false);
 
   const missionSet = useMemo(() => new Set(missionTargets), [missionTargets]);
@@ -210,7 +210,7 @@ export default function Game({
       clearTimeout(fanfareTimeoutRef.current);
       fanfareTimeoutRef.current = null;
     }
-    fanfareShownRef.current = false;
+    nextFanfareScoreRef.current = 20;
 
     if (mode === "mission") {
       setMissionTargets(randomMissionTargets());
@@ -263,9 +263,11 @@ export default function Game({
 
   useEffect(() => {
     if (mode !== "free" || phase !== "play") return;
-    if (score < 10 || fanfareShownRef.current) return;
+    if (score < nextFanfareScoreRef.current) return;
 
-    fanfareShownRef.current = true;
+    while (score >= nextFanfareScoreRef.current) {
+      nextFanfareScoreRef.current += 20;
+    }
     setFireworkSeed((n) => n + 1);
     setFanfareNotice(true);
     if (fanfareTimeoutRef.current !== null) {
@@ -488,7 +490,7 @@ export default function Game({
   }, [phase, mode, missionSet]);
 
   return (
-    <main className="min-h-[100dvh] bg-gradient-to-b from-pink-100 to-blue-100 flex items-center justify-center p-4">
+    <main className="h-full min-h-full bg-gradient-to-b from-pink-100 to-blue-100 flex items-center justify-center p-4">
       <style jsx global>{`
         @keyframes shake {
           0% {
