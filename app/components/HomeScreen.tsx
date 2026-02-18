@@ -33,10 +33,16 @@ const MODES: ModeOption[] = [
 
 export default function HomeScreen({
   bestScore,
+  stores,
+  selectedStore,
+  onStoreChange,
   onStart,
   onOpenLeaderboard,
 }: {
   bestScore: number;
+  stores: string[];
+  selectedStore: string;
+  onStoreChange: (store: string) => void;
   onStart: (character: CharId, mode: GameMode) => void;
   onOpenLeaderboard: () => void;
 }) {
@@ -151,6 +157,19 @@ export default function HomeScreen({
         </section>
 
         <section className="mb-3 rounded-2xl border border-[#f8d2e4] bg-white/80 p-3">
+          <p className="mb-2 text-xs font-black uppercase tracking-[0.18em] text-[#960953]">Store</p>
+          <select
+            value={selectedStore}
+            onChange={(e) => onStoreChange(e.target.value)}
+            className="mb-3 w-full rounded-xl border border-[#f3bdd8] bg-[#fff9fc] px-3 py-2 text-sm font-semibold text-[#4b0f31] outline-none focus:border-[#960953]"
+          >
+            {stores.map((store) => (
+              <option key={store} value={store}>
+                {store}
+              </option>
+            ))}
+          </select>
+
           <p className="mb-2 text-xs font-black uppercase tracking-[0.18em] text-[#960953]">Game mode</p>
           <div className="space-y-2">
             {MODES.map((m) => {

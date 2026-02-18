@@ -26,6 +26,9 @@ export default function LeaderboardModal({
   onClose,
   rows,
   loading = false,
+  stores,
+  selectedStore,
+  onStoreChange,
   myNickname,
   myScore,
   myRank,
@@ -36,6 +39,9 @@ export default function LeaderboardModal({
   onClose: () => void;
   rows: LeaderRow[];
   loading?: boolean;
+  stores: string[];
+  selectedStore: string;
+  onStoreChange: (store: string) => void;
   myNickname?: string;
   myScore?: number;
   myRank?: number;
@@ -96,6 +102,18 @@ export default function LeaderboardModal({
               All-time
             </button>
           </div>
+
+          <select
+            value={selectedStore}
+            onChange={(e) => onStoreChange(e.target.value)}
+            className="mt-3 w-full rounded-lg border border-[#efb8d4] bg-white px-3 py-2 text-sm font-semibold text-[#6f3254] outline-none"
+          >
+            {stores.map((store) => (
+              <option key={store} value={store}>
+                {store}
+              </option>
+            ))}
+          </select>
         </div>
 
         <div className="px-5 pb-5 pt-4">

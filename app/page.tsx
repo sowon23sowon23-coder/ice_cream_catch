@@ -6,6 +6,7 @@ import HomeScreen from "./components/HomeScreen";
 import Game from "./components/Game";
 import LeaderboardModal, { LeaderMode, LeaderRow } from "./components/LeaderboardModal";
 import { supabase } from "./lib/supabaseClient";
+import { STORE_OPTIONS } from "./lib/stores";
 
 type CharId = "green" | "berry" | "sprinkle";
 type Phase = "home" | "game";
@@ -17,41 +18,63 @@ type DbRow = {
   score: number;
   updated_at: string;
   character?: CharId;
+  store?: string;
 };
 
 function normalizeNick(raw: string) {
   return raw.trim().toLowerCase();
 }
 
-async function fetchMyBestScore(nicknameDisplay: string) {
+async function fetchMyBestScore(nicknameDisplay: string, selectedStore: string) {
   const key = normalizeNick(nicknameDisplay);
 
-  const initial = await supabase
-    .from("leaderboard_best_v2")
-    .select("score,nickname_display,character")
-    .eq("nickname_key", key)
-    .maybeSingle();
-  let data: any = initial.data;
-  let error: any = initial.error;
+  const attempts = [
+    () =>
+      supabase
+        .from("leaderboard_best_v2")
+        .select("score,nickname_display,character,store")
+        .eq("nickname_key", key)
+        .eq("store", selectedStore)
+        .maybeSingle(),
+    () =>
+      supabase
+        .from("leaderboard_best_v2")
+        .select("score,nickname_display,store")
+        .eq("nickname_key", key)
+        .eq("store", selectedStore)
+        .maybeSingle(),
+    () =>
+      supabase
+        .from("leaderboard_best_v2")
+        .select("score,nickname_display,character")
+        .eq("nickname_key", key)
+        .maybeSingle(),
+    () =>
+      supabase
+        .from("leaderboard_best_v2")
+        .select("score,nickname_display")
+        .eq("nickname_key", key)
+        .maybeSingle(),
+  ];
 
-  if (error && String(error.message).toLowerCase().includes("character")) {
-    const fallback = await supabase
-      .from("leaderboard_best_v2")
-      .select("score,nickname_display")
-      .eq("nickname_key", key)
-      .maybeSingle();
-    data = fallback.data;
-    error = fallback.error;
+  let data: any = null;
+  let error: any = null;
+  for (const attempt of attempts) {
+    const res = await attempt();
+    data = res.data;
+    error = res.error;
+    if (!error) break;
   }
 
   if (error) throw error;
   if (!data) return undefined;
 
-  const row = data as { score: number; nickname_display: string; character?: CharId | null };
+  const row = data as { score: number; nickname_display: string; character?: CharId | null; store?: string | null };
   return {
     score: row.score,
     display: row.nickname_display,
     character: row.character ?? undefined,
+    store: row.store ?? selectedStore,
   };
 }
 
@@ -75,6 +98,7 @@ export default function Page() {
   const [lbLoading, setLbLoading] = useState(false);
 
   const [mode, setMode] = useState<LeaderMode>("today");
+  const [selectedStore, setSelectedStore] = useState<string>(STORE_OPTIONS[0] ?? "Yogurtland Demo Vendor");
 
   const [lastScore, setLastScore] = useState<number | undefined>(undefined);
   const [lastNick, setLastNick] = useState<string | undefined>(undefined);
@@ -85,7 +109,15 @@ export default function Page() {
     const b = Number(localStorage.getItem("bestScore") || 0);
     setBest(b);
     setLastNick(localStorage.getItem("nickname") ?? undefined);
+    const savedStore = localStorage.getItem("selectedStore");
+    if (savedStore && STORE_OPTIONS.includes(savedStore)) {
+      setSelectedStore(savedStore);
+    }
   }, [phase]);
+
+  useEffect(() => {
+    localStorage.setItem("selectedStore", selectedStore);
+  }, [selectedStore]);
 
   useEffect(() => {
     const updateScale = () => {
@@ -100,39 +132,61 @@ export default function Page() {
     return () => window.removeEventListener("resize", updateScale);
   }, []);
 
-  const fetchTop20 = async (m: LeaderMode) => {
+  const fetchTop20 = async (m: LeaderMode, store: string) => {
     setLbLoading(true);
 
-    let q = supabase
-      .from("leaderboard_best_v2")
-      .select("nickname_key,nickname_display,score,updated_at,character")
-      .order("score", { ascending: false })
-      .order("updated_at", { ascending: true })
-      .limit(20);
+    const attempts = [
+      () => {
+        let q = supabase
+          .from("leaderboard_best_v2")
+          .select("nickname_key,nickname_display,score,updated_at,character,store")
+          .eq("store", store)
+          .order("score", { ascending: false })
+          .order("updated_at", { ascending: true })
+          .limit(20);
+        if (m === "today") q = q.gte("updated_at", startOfTodayLocalISO());
+        return q;
+      },
+      () => {
+        let q = supabase
+          .from("leaderboard_best_v2")
+          .select("nickname_key,nickname_display,score,updated_at,store")
+          .eq("store", store)
+          .order("score", { ascending: false })
+          .order("updated_at", { ascending: true })
+          .limit(20);
+        if (m === "today") q = q.gte("updated_at", startOfTodayLocalISO());
+        return q;
+      },
+      () => {
+        let q = supabase
+          .from("leaderboard_best_v2")
+          .select("nickname_key,nickname_display,score,updated_at,character")
+          .order("score", { ascending: false })
+          .order("updated_at", { ascending: true })
+          .limit(20);
+        if (m === "today") q = q.gte("updated_at", startOfTodayLocalISO());
+        return q;
+      },
+      () => {
+        let q = supabase
+          .from("leaderboard_best_v2")
+          .select("nickname_key,nickname_display,score,updated_at")
+          .order("score", { ascending: false })
+          .order("updated_at", { ascending: true })
+          .limit(20);
+        if (m === "today") q = q.gte("updated_at", startOfTodayLocalISO());
+        return q;
+      },
+    ];
 
-    if (m === "today") {
-      q = q.gte("updated_at", startOfTodayLocalISO());
-    }
-
-    const initial = await q;
-    let data: any = initial.data;
-    let error: any = initial.error;
-
-    if (error && String(error.message).toLowerCase().includes("character")) {
-      let qFallback = supabase
-        .from("leaderboard_best_v2")
-        .select("nickname_key,nickname_display,score,updated_at")
-        .order("score", { ascending: false })
-        .order("updated_at", { ascending: true })
-        .limit(20);
-
-      if (m === "today") {
-        qFallback = qFallback.gte("updated_at", startOfTodayLocalISO());
-      }
-
-      const fallback = await qFallback;
-      data = fallback.data;
-      error = fallback.error;
+    let data: any = null;
+    let error: any = null;
+    for (const attempt of attempts) {
+      const res = await attempt();
+      data = res.data;
+      error = res.error;
+      if (!error) break;
     }
 
     setLbLoading(false);
@@ -166,17 +220,35 @@ export default function Page() {
     setLbRows(rows);
   };
 
-  const calcMyRank = async (m: LeaderMode, score: number) => {
-    let q = supabase
-      .from("leaderboard_best_v2")
-      .select("nickname_key", { count: "exact", head: true })
-      .gt("score", score);
+  const calcMyRank = async (m: LeaderMode, score: number, store: string) => {
+    const attempts = [
+      () => {
+        let q = supabase
+          .from("leaderboard_best_v2")
+          .select("nickname_key", { count: "exact", head: true })
+          .eq("store", store)
+          .gt("score", score);
+        if (m === "today") q = q.gte("updated_at", startOfTodayLocalISO());
+        return q;
+      },
+      () => {
+        let q = supabase
+          .from("leaderboard_best_v2")
+          .select("nickname_key", { count: "exact", head: true })
+          .gt("score", score);
+        if (m === "today") q = q.gte("updated_at", startOfTodayLocalISO());
+        return q;
+      },
+    ];
 
-    if (m === "today") {
-      q = q.gte("updated_at", startOfTodayLocalISO());
+    let count: number | null = null;
+    let error: any = null;
+    for (const attempt of attempts) {
+      const res = await attempt();
+      count = res.count;
+      error = res.error;
+      if (!error) break;
     }
-
-    const { count, error } = await q;
     if (error) {
       console.error(error);
       setMyRank(undefined);
@@ -191,14 +263,14 @@ export default function Page() {
     const nick = (localStorage.getItem("nickname") || "").trim();
     setLastNick(nick || undefined);
 
-    await fetchTop20(mode);
+    await fetchTop20(mode, selectedStore);
 
     if (nick.length >= 2 && nick.length <= 12) {
       try {
-        const mine = await fetchMyBestScore(nick);
+        const mine = await fetchMyBestScore(nick, selectedStore);
         if (mine) {
           setLastScore(mine.score);
-          await calcMyRank(mode, mine.score);
+          await calcMyRank(mode, mine.score, selectedStore);
         } else {
           setLastScore(undefined);
           setMyRank(undefined);
@@ -219,22 +291,49 @@ export default function Page() {
   const upsertBestScore = async (
     nicknameDisplay: string,
     score: number,
-    selectedCharacter: CharId
+    selectedCharacter: CharId,
+    store: string
   ) => {
     const nickname_key = normalizeNick(nicknameDisplay);
 
-    let { error } = await supabase.from("leaderboard_best_v2").upsert(
-      [{ nickname_key, nickname_display: nicknameDisplay.trim(), score, character: selectedCharacter }],
-      { onConflict: "nickname_key" }
-    );
+    const attempts = [
+      () =>
+        supabase.from("leaderboard_best_v2").upsert(
+          [{ nickname_key, nickname_display: nicknameDisplay.trim(), score, character: selectedCharacter, store }],
+          { onConflict: "nickname_key,store" }
+        ),
+      () =>
+        supabase.from("leaderboard_best_v2").upsert(
+          [{ nickname_key, nickname_display: nicknameDisplay.trim(), score, character: selectedCharacter, store }],
+          { onConflict: "nickname_key" }
+        ),
+      () =>
+        supabase.from("leaderboard_best_v2").upsert(
+          [{ nickname_key, nickname_display: nicknameDisplay.trim(), score, store }],
+          { onConflict: "nickname_key,store" }
+        ),
+      () =>
+        supabase.from("leaderboard_best_v2").upsert(
+          [{ nickname_key, nickname_display: nicknameDisplay.trim(), score, store }],
+          { onConflict: "nickname_key" }
+        ),
+      () =>
+        supabase.from("leaderboard_best_v2").upsert(
+          [{ nickname_key, nickname_display: nicknameDisplay.trim(), score, character: selectedCharacter }],
+          { onConflict: "nickname_key" }
+        ),
+      () =>
+        supabase.from("leaderboard_best_v2").upsert(
+          [{ nickname_key, nickname_display: nicknameDisplay.trim(), score }],
+          { onConflict: "nickname_key" }
+        ),
+    ];
 
-    if (error && String(error.message).toLowerCase().includes("character")) {
-      const fallback = await supabase
-        .from("leaderboard_best_v2")
-        .upsert([{ nickname_key, nickname_display: nicknameDisplay.trim(), score }], {
-          onConflict: "nickname_key",
-        });
-      error = fallback.error;
+    let error: any = null;
+    for (const attempt of attempts) {
+      const res = await attempt();
+      error = res.error;
+      if (!error) break;
     }
 
     if (error) {
@@ -245,12 +344,38 @@ export default function Page() {
 
   const onChangeMode = async (m: LeaderMode) => {
     setMode(m);
-    await fetchTop20(m);
+    await fetchTop20(m, selectedStore);
 
     if (lastScore !== undefined) {
-      await calcMyRank(m, lastScore);
+      await calcMyRank(m, lastScore, selectedStore);
     } else {
       setMyRank(undefined);
+    }
+  };
+
+  const onChangeStore = async (store: string) => {
+    setSelectedStore(store);
+
+    if (!lbOpen) return;
+
+    const nick = (localStorage.getItem("nickname") || "").trim();
+    await fetchTop20(mode, store);
+
+    if (nick.length >= 2 && nick.length <= 12) {
+      try {
+        const mine = await fetchMyBestScore(nick, store);
+        if (mine) {
+          setLastScore(mine.score);
+          await calcMyRank(mode, mine.score, store);
+        } else {
+          setLastScore(undefined);
+          setMyRank(undefined);
+        }
+      } catch (e) {
+        console.error(e);
+        setLastScore(undefined);
+        setMyRank(undefined);
+      }
     }
   };
 
@@ -270,6 +395,9 @@ export default function Page() {
             {phase === "home" && (
               <HomeScreen
                 bestScore={best}
+                stores={STORE_OPTIONS}
+                selectedStore={selectedStore}
+                onStoreChange={setSelectedStore}
                 onStart={(char: CharId, mode: GameMode) => {
                   setCharacter(char);
                   setGameMode(mode);
@@ -298,13 +426,13 @@ export default function Page() {
                   setLastScore(finalScore);
 
                   if (nick.length >= 2 && nick.length <= 12) {
-                    await upsertBestScore(nick, finalScore, character);
-                    await calcMyRank(mode, finalScore);
+                    await upsertBestScore(nick, finalScore, character, selectedStore);
+                    await calcMyRank(mode, finalScore, selectedStore);
                   } else {
                     setMyRank(undefined);
                   }
 
-                  await fetchTop20(mode);
+                  await fetchTop20(mode, selectedStore);
                   setLbOpen(true);
                 }}
               />
@@ -318,6 +446,9 @@ export default function Page() {
         onClose={() => setLbOpen(false)}
         rows={lbRows}
         loading={lbLoading}
+        stores={STORE_OPTIONS}
+        selectedStore={selectedStore}
+        onStoreChange={onChangeStore}
         myNickname={lastNick}
         myScore={lastScore}
         myRank={myRank}
