@@ -229,11 +229,10 @@ export default function Page() {
     const savedNick = (localStorage.getItem("nickname") || "").trim();
     if (savedNick.length >= 2 && savedNick.length <= 12) {
       setAuthNick(savedNick);
-      setPhase("home");
     } else {
       setAuthNick(undefined);
-      setPhase("login");
     }
+    setPhase("login");
   }, []);
 
   useEffect(() => {
