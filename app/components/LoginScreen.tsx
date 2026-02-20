@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 export default function LoginScreen({
   initialNickname = "",
@@ -19,6 +19,10 @@ export default function LoginScreen({
   const [storeQuery, setStoreQuery] = useState("");
   const [nicknameError, setNicknameError] = useState<string | null>(null);
   const [storeError, setStoreError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setNickname(initialNickname);
+  }, [initialNickname]);
 
   const filteredStores = useMemo(() => {
     const q = storeQuery.trim().toLowerCase();
