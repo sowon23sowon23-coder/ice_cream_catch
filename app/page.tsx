@@ -630,6 +630,8 @@ export default function Page() {
                 onGameOver={async (finalScore: number) => {
                   const nick = (localStorage.getItem("nickname") || "").trim();
 
+                  setLbOpen(true);
+                  setLbLoading(true);
                   setLastNick(nick || undefined);
 
                   if (nick.length >= 2 && nick.length <= 12) {
@@ -653,7 +655,6 @@ export default function Page() {
                   }
 
                   await fetchTop20(mode, selectedStore);
-                  setLbOpen(true);
                 }}
               />
             )}
