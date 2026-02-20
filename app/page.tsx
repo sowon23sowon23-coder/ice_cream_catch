@@ -43,34 +43,43 @@ async function fetchMyBestScore(nicknameDisplay: string, selectedStore: string) 
     let { data, error } = await query;
 
     // Fallback attempts if first query fails
-    if (error) {
+    if (error && !data) {
       const fallbacks = [
-        () =>
-          supabase
+        async () => {
+          let q = supabase
             .from("leaderboard_best_v2")
             .select("score,nickname_display,store")
             .eq("nickname_key", key)
             .order("score", { ascending: false })
-            .limit(1),
-        () =>
-          supabase
+            .limit(1);
+          if (selectedStore !== "__ALL__") q = q.eq("store", selectedStore);
+          return q;
+        },
+        async () => {
+          let q = supabase
             .from("leaderboard_best_v2")
             .select("score,nickname_display,character")
             .eq("nickname_key", key)
             .order("score", { ascending: false })
-            .limit(1),
-        () =>
-          supabase
+            .limit(1);
+          if (selectedStore !== "__ALL__") q = q.eq("store", selectedStore);
+          return q;
+        },
+        async () => {
+          let q = supabase
             .from("leaderboard_best_v2")
             .select("score,nickname_display")
             .eq("nickname_key", key)
             .order("score", { ascending: false })
-            .limit(1),
+            .limit(1);
+          if (selectedStore !== "__ALL__") q = q.eq("store", selectedStore);
+          return q;
+        },
       ];
 
       for (const fallback of fallbacks) {
         const result = await fallback();
-        if (!result.error) {
+        if (!result.error && result.data) {
           data = result.data;
           error = null;
           break;
@@ -154,37 +163,46 @@ export default function Page() {
       let { data, error } = await query;
 
       // Fallback attempts if first query fails
-      if (error) {
+      if (error && !data) {
         const fallbacks = [
-          () =>
-            supabase
+          async () => {
+            let q = supabase
               .from("leaderboard_best_v2")
               .select("nickname_key,nickname_display,score,updated_at,store")
               .order("score", { ascending: false })
               .order("updated_at", { ascending: true })
-              .limit(20)
-              .then((r) =>
-                store !== "__ALL__" ? { ...r, data: r.data } : r
-              ),
-          () =>
-            supabase
+              .limit(20);
+            if (store !== "__ALL__") q = q.eq("store", store);
+            if (m === "today") q = q.gte("updated_at", startOfTodayLocalISO());
+            return q;
+          },
+          async () => {
+            let q = supabase
               .from("leaderboard_best_v2")
               .select("nickname_key,nickname_display,score,updated_at,character")
               .order("score", { ascending: false })
               .order("updated_at", { ascending: true })
-              .limit(20),
-          () =>
-            supabase
+              .limit(20);
+            if (store !== "__ALL__") q = q.eq("store", store);
+            if (m === "today") q = q.gte("updated_at", startOfTodayLocalISO());
+            return q;
+          },
+          async () => {
+            let q = supabase
               .from("leaderboard_best_v2")
               .select("nickname_key,nickname_display,score,updated_at")
               .order("score", { ascending: false })
               .order("updated_at", { ascending: true })
-              .limit(20),
+              .limit(20);
+            if (store !== "__ALL__") q = q.eq("store", store);
+            if (m === "today") q = q.gte("updated_at", startOfTodayLocalISO());
+            return q;
+          },
         ];
 
         for (const fallback of fallbacks) {
           const result = await fallback();
-          if (!result.error) {
+          if (!result.error && result.data) {
             data = result.data;
             error = null;
             break;
@@ -196,7 +214,7 @@ export default function Page() {
 
       if (error) {
         console.error("Leaderboard error:", error);
-        alert("Failed to load leaderboard.");
+        setLbRows([]);
         return;
       }
 
@@ -224,7 +242,7 @@ export default function Page() {
     } catch (err) {
       console.error("Leaderboard exception:", err);
       setLbLoading(false);
-      alert("Failed to load leaderboard.");
+      setLbRows([]);
     }
   };
 
@@ -246,14 +264,14 @@ export default function Page() {
       let { count, error } = await query;
 
       // Fallback if first query fails
-      if (error) {
-        const fallback = await supabase
+      if (error && count === null) {
+        const result = await supabase
           .from("leaderboard_best_v2")
           .select("nickname_key", { count: "exact", head: true })
           .gt("score", score);
 
-        count = fallback.count;
-        error = fallback.error;
+        count = result.count;
+        error = result.error;
       }
 
       if (error) {
