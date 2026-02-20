@@ -579,11 +579,15 @@ export default function Page() {
       <main className="fixed inset-0 overflow-auto bg-[radial-gradient(circle_at_15%_5%,#ffffff_0%,#ffeef8_35%,#f8d5e8_100%)] flex items-center justify-center p-4">
         <div className="flex w-full max-w-[390px] items-center justify-center">
           <div
-            className="relative overflow-hidden rounded-[2rem] bg-white/95 shadow-[0_22px_60px_rgba(150,9,83,0.28)] ring-1 ring-[#f4c2db]"
+            className={`relative overflow-hidden rounded-[2rem] ${
+              phase === "login"
+                ? ""
+                : "bg-white/95 shadow-[0_22px_60px_rgba(150,9,83,0.28)] ring-1 ring-[#f4c2db]"
+            }`}
             style={{
               width: "100%",
-              height: phase === "game" ? "auto" : 844,
-              minHeight: phase === "game" ? "auto" : 844,
+              height: phase === "home" ? 844 : "auto",
+              minHeight: phase === "home" ? 844 : "auto",
             }}
           >
             {phase === "login" && (

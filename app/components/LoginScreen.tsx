@@ -29,11 +29,8 @@ export default function LoginScreen({
   };
 
   return (
-    <main className="relative h-full overflow-hidden bg-[radial-gradient(circle_at_12%_8%,#ffffff_0%,#ffedf7_36%,#f9d3e7_100%)] p-5">
-      <div className="pointer-events-none absolute -right-14 -top-14 h-56 w-56 rounded-full bg-white/70 blur-2xl" />
-      <div className="pointer-events-none absolute -left-14 bottom-10 h-44 w-44 rounded-full bg-[#9ee86b]/30 blur-2xl" />
-
-      <div className="relative z-10 mx-auto flex h-full max-w-sm items-center">
+    <main className="flex min-h-[70vh] items-center p-5">
+      <div className="mx-auto w-full max-w-sm">
         <section className="w-full rounded-3xl border border-[#f8d2e4] bg-white/92 p-6 shadow-[0_16px_40px_rgba(150,9,83,0.16)] backdrop-blur-sm">
           <p className="text-[11px] font-black uppercase tracking-[0.2em] text-[#960953]">Yogurtland</p>
           <h1 className="mt-1 text-3xl font-black leading-[1.08] text-[#4b0b31]">Ice Cream Catcher</h1>
