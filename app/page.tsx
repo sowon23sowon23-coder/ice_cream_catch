@@ -46,6 +46,8 @@ async function fetchMyBestScore(nicknameDisplay: string, selectedStore: string) 
 
     if (selectedStore !== "__ALL__") {
       query = query.eq("store", selectedStore);
+    } else {
+      query = query.neq("store", "__ALL__");
     }
 
     const initial = await query;
@@ -62,7 +64,11 @@ async function fetchMyBestScore(nicknameDisplay: string, selectedStore: string) 
             .eq("nickname_key", key)
             .order("score", { ascending: false })
             .limit(1);
-          if (selectedStore !== "__ALL__") q = q.eq("store", selectedStore);
+          if (selectedStore !== "__ALL__") {
+            q = q.eq("store", selectedStore);
+          } else {
+            q = q.neq("store", "__ALL__");
+          }
           return q;
         },
         async () => {
@@ -72,7 +78,11 @@ async function fetchMyBestScore(nicknameDisplay: string, selectedStore: string) 
             .eq("nickname_key", key)
             .order("score", { ascending: false })
             .limit(1);
-          if (selectedStore !== "__ALL__") q = q.eq("store", selectedStore);
+          if (selectedStore !== "__ALL__") {
+            q = q.eq("store", selectedStore);
+          } else {
+            q = q.neq("store", "__ALL__");
+          }
           return q;
         },
         async () => {
@@ -82,7 +92,11 @@ async function fetchMyBestScore(nicknameDisplay: string, selectedStore: string) 
             .eq("nickname_key", key)
             .order("score", { ascending: false })
             .limit(1);
-          if (selectedStore !== "__ALL__") q = q.eq("store", selectedStore);
+          if (selectedStore !== "__ALL__") {
+            q = q.eq("store", selectedStore);
+          } else {
+            q = q.neq("store", "__ALL__");
+          }
           return q;
         },
       ];
@@ -128,6 +142,8 @@ async function fetchMyTodayScore(nicknameDisplay: string, selectedStore: string)
 
     if (selectedStore !== "__ALL__") {
       query = query.eq("store", selectedStore);
+    } else {
+      query = query.neq("store", "__ALL__");
     }
 
     const initial = await query;
@@ -145,7 +161,11 @@ async function fetchMyTodayScore(nicknameDisplay: string, selectedStore: string)
             .order("score", { ascending: false })
             .order("updated_at", { ascending: true })
             .limit(1);
-          if (selectedStore !== "__ALL__") q = q.eq("store", selectedStore);
+          if (selectedStore !== "__ALL__") {
+            q = q.eq("store", selectedStore);
+          } else {
+            q = q.neq("store", "__ALL__");
+          }
           return q;
         },
         async () => {
@@ -157,7 +177,11 @@ async function fetchMyTodayScore(nicknameDisplay: string, selectedStore: string)
             .order("score", { ascending: false })
             .order("updated_at", { ascending: true })
             .limit(1);
-          if (selectedStore !== "__ALL__") q = q.eq("store", selectedStore);
+          if (selectedStore !== "__ALL__") {
+            q = q.eq("store", selectedStore);
+          } else {
+            q = q.neq("store", "__ALL__");
+          }
           return q;
         },
         async () => {
@@ -169,7 +193,11 @@ async function fetchMyTodayScore(nicknameDisplay: string, selectedStore: string)
             .order("score", { ascending: false })
             .order("updated_at", { ascending: true })
             .limit(1);
-          if (selectedStore !== "__ALL__") q = q.eq("store", selectedStore);
+          if (selectedStore !== "__ALL__") {
+            q = q.eq("store", selectedStore);
+          } else {
+            q = q.neq("store", "__ALL__");
+          }
           return q;
         },
       ];
@@ -246,7 +274,7 @@ export default function Page() {
   }, [phase]);
 
   useEffect(() => {
-    if (selectedStore.trim()) {
+    if (selectedStore.trim() && selectedStore !== "__ALL__") {
       localStorage.setItem("selectedStore", selectedStore);
     }
   }, [selectedStore]);
@@ -264,6 +292,8 @@ export default function Page() {
 
       if (store !== "__ALL__") {
         query = query.eq("store", store);
+      } else {
+        query = query.neq("store", "__ALL__");
       }
 
       if (m === "today") {
@@ -284,7 +314,11 @@ export default function Page() {
               .order("score", { ascending: false })
               .order("updated_at", { ascending: true })
               .limit(20);
-            if (store !== "__ALL__") q = q.eq("store", store);
+            if (store !== "__ALL__") {
+              q = q.eq("store", store);
+            } else {
+              q = q.neq("store", "__ALL__");
+            }
             if (m === "today") q = q.gte("updated_at", startOfTodayLocalISO());
             return q;
           },
@@ -295,7 +329,11 @@ export default function Page() {
               .order("score", { ascending: false })
               .order("updated_at", { ascending: true })
               .limit(20);
-            if (store !== "__ALL__") q = q.eq("store", store);
+            if (store !== "__ALL__") {
+              q = q.eq("store", store);
+            } else {
+              q = q.neq("store", "__ALL__");
+            }
             if (m === "today") q = q.gte("updated_at", startOfTodayLocalISO());
             return q;
           },
@@ -306,7 +344,11 @@ export default function Page() {
               .order("score", { ascending: false })
               .order("updated_at", { ascending: true })
               .limit(20);
-            if (store !== "__ALL__") q = q.eq("store", store);
+            if (store !== "__ALL__") {
+              q = q.eq("store", store);
+            } else {
+              q = q.neq("store", "__ALL__");
+            }
             if (m === "today") q = q.gte("updated_at", startOfTodayLocalISO());
             return q;
           },
@@ -367,6 +409,8 @@ export default function Page() {
 
       if (store !== "__ALL__") {
         query = query.eq("store", store);
+      } else {
+        query = query.neq("store", "__ALL__");
       }
 
       if (m === "today") {
@@ -377,11 +421,21 @@ export default function Page() {
 
       // Fallback if first query fails
       if (error && count === null) {
-        const result = await supabase
+        let fallbackQuery = supabase
           .from("leaderboard_best_v2")
           .select("nickname_key", { count: "exact", head: true })
           .gt("score", score);
 
+        if (store !== "__ALL__") {
+          fallbackQuery = fallbackQuery.eq("store", store);
+        } else {
+          fallbackQuery = fallbackQuery.neq("store", "__ALL__");
+        }
+        if (m === "today") {
+          fallbackQuery = fallbackQuery.gte("updated_at", startOfTodayLocalISO());
+        }
+
+        const result = await fallbackQuery;
         count = result.count;
         error = result.error;
       }
@@ -634,13 +688,17 @@ export default function Page() {
                 }}
                 onGameOver={async (finalScore: number) => {
                   const nick = (localStorage.getItem("nickname") || "").trim();
+                  const scoreStore =
+                    selectedStore === "__ALL__"
+                      ? (localStorage.getItem("selectedStore") || STORE_OPTIONS[0] || "")
+                      : selectedStore;
 
                   setLbOpen(true);
                   setLbLoading(true);
                   setLastNick(nick || undefined);
 
                   if (nick.length >= 2 && nick.length <= 12) {
-                    await upsertBestScore(nick, finalScore, character, selectedStore);
+                    await upsertBestScore(nick, finalScore, character, scoreStore);
 
                     const mine =
                       mode === "today"
