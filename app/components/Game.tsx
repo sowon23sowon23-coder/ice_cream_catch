@@ -398,10 +398,8 @@ export default function Game({
       if (mode === "mission") {
         itemData = { emoji: MISSION_TOPPINGS[Math.floor(Math.random() * MISSION_TOPPINGS.length)] };
       } else {
-        // 70% chance for ice cream, 30% chance for gummy bear
-        itemData = Math.random() < 0.7 
-          ? { emoji: "🍨" }
-          : { image: "gummy-bear.png" };
+        // Free play: only gummy bear
+        itemData = { image: "gummy-bear.png" };
       }
 
       setItems((v) => [
