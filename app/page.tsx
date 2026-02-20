@@ -28,6 +28,65 @@ function normalizeNick(raw: string) {
 async function fetchMyBestScore(nicknameDisplay: string, selectedStore: string) {
   const key = normalizeNick(nicknameDisplay);
 
+  // If selectedStore is "__ALL__", get best score across all stores
+  if (selectedStore === "__ALL__") {
+    const attempts = [
+      () =>
+        supabase
+          .from("leaderboard_best_v2")
+          .select("score,nickname_display,character,store")
+          .eq("nickname_key", key)
+          .order("score", { ascending: false })
+          .limit(1)
+          .maybeSingle(),
+      () =>
+        supabase
+          .from("leaderboard_best_v2")
+          .select("score,nickname_display,store")
+          .eq("nickname_key", key)
+          .order("score", { ascending: false })
+          .limit(1)
+          .maybeSingle(),
+      () =>
+        supabase
+          .from("leaderboard_best_v2")
+          .select("score,nickname_display,character")
+          .eq("nickname_key", key)
+          .order("score", { ascending: false })
+          .limit(1)
+          .maybeSingle(),
+      () =>
+        supabase
+          .from("leaderboard_best_v2")
+          .select("score,nickname_display")
+          .eq("nickname_key", key)
+          .order("score", { ascending: false })
+          .limit(1)
+          .maybeSingle(),
+    ];
+
+    let data: any = null;
+    let error: any = null;
+    for (const attempt of attempts) {
+      const res = await attempt();
+      data = res.data;
+      error = res.error;
+      if (!error) break;
+    }
+
+    if (error) throw error;
+    if (!data) return undefined;
+
+    const row = data as { score: number; nickname_display: string; character?: CharId | null; store?: string | null };
+    return {
+      score: row.score,
+      display: row.nickname_display,
+      character: row.character ?? undefined,
+      store: row.store ?? "Unknown",
+    };
+  }
+
+  // Original logic for specific store
   const attempts = [
     () =>
       supabase
@@ -123,9 +182,13 @@ export default function Page() {
       () => {
         let q = supabase
           .from("leaderboard_best_v2")
-          .select("nickname_key,nickname_display,score,updated_at,character,store")
-          .eq("store", store)
-          .order("score", { ascending: false })
+          .select("nickname_key,nickname_display,score,updated_at,character,store");
+        
+        if (store !== "__ALL__") {
+          q = q.eq("store", store);
+        }
+        
+        q = q.order("score", { ascending: false })
           .order("updated_at", { ascending: true })
           .limit(20);
         if (m === "today") q = q.gte("updated_at", startOfTodayLocalISO());
@@ -134,9 +197,13 @@ export default function Page() {
       () => {
         let q = supabase
           .from("leaderboard_best_v2")
-          .select("nickname_key,nickname_display,score,updated_at,store")
-          .eq("store", store)
-          .order("score", { ascending: false })
+          .select("nickname_key,nickname_display,score,updated_at,store");
+        
+        if (store !== "__ALL__") {
+          q = q.eq("store", store);
+        }
+        
+        q = q.order("score", { ascending: false })
           .order("updated_at", { ascending: true })
           .limit(20);
         if (m === "today") q = q.gte("updated_at", startOfTodayLocalISO());
@@ -145,8 +212,13 @@ export default function Page() {
       () => {
         let q = supabase
           .from("leaderboard_best_v2")
-          .select("nickname_key,nickname_display,score,updated_at,character")
-          .order("score", { ascending: false })
+          .select("nickname_key,nickname_display,score,updated_at,character");
+        
+        if (store !== "__ALL__") {
+          q = q.eq("store", store);
+        }
+        
+        q = q.order("score", { ascending: false })
           .order("updated_at", { ascending: true })
           .limit(20);
         if (m === "today") q = q.gte("updated_at", startOfTodayLocalISO());
@@ -155,8 +227,13 @@ export default function Page() {
       () => {
         let q = supabase
           .from("leaderboard_best_v2")
-          .select("nickname_key,nickname_display,score,updated_at")
-          .order("score", { ascending: false })
+          .select("nickname_key,nickname_display,score,updated_at");
+        
+        if (store !== "__ALL__") {
+          q = q.eq("store", store);
+        }
+        
+        q = q.order("score", { ascending: false })
           .order("updated_at", { ascending: true })
           .limit(20);
         if (m === "today") q = q.gte("updated_at", startOfTodayLocalISO());
@@ -210,8 +287,12 @@ export default function Page() {
         let q = supabase
           .from("leaderboard_best_v2")
           .select("nickname_key", { count: "exact", head: true })
-          .eq("store", store)
           .gt("score", score);
+        
+        if (store !== "__ALL__") {
+          q = q.eq("store", store);
+        }
+        
         if (m === "today") q = q.gte("updated_at", startOfTodayLocalISO());
         return q;
       },
@@ -220,6 +301,11 @@ export default function Page() {
           .from("leaderboard_best_v2")
           .select("nickname_key", { count: "exact", head: true })
           .gt("score", score);
+        
+        if (store !== "__ALL__") {
+          q = q.eq("store", store);
+        }
+        
         if (m === "today") q = q.gte("updated_at", startOfTodayLocalISO());
         return q;
       },

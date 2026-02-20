@@ -108,6 +108,7 @@ export default function LeaderboardModal({
             onChange={(e) => onStoreChange(e.target.value)}
             className="mt-3 w-full rounded-lg border border-[#efb8d4] bg-white px-3 py-2 text-sm font-semibold text-[#6f3254] outline-none"
           >
+            <option value="__ALL__">All Stores</option>
             {stores.map((store) => (
               <option key={store} value={store}>
                 {store}
