@@ -606,9 +606,6 @@ export default function Page() {
               <HomeScreen
                 nickname={authNick}
                 bestScore={best}
-                stores={STORE_OPTIONS}
-                selectedStore={selectedStore}
-                onStoreChange={setSelectedStore}
                 onStart={(char: CharId, mode: GameMode) => {
                   setCharacter(char);
                   setGameMode(mode);
