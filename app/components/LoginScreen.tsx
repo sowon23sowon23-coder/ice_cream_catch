@@ -17,7 +17,8 @@ export default function LoginScreen({
 }) {
   const [nickname, setNickname] = useState(initialNickname);
   const [storeQuery, setStoreQuery] = useState("");
-  const [error, setError] = useState<string | null>(null);
+  const [nicknameError, setNicknameError] = useState<string | null>(null);
+  const [storeError, setStoreError] = useState<string | null>(null);
 
   const filteredStores = useMemo(() => {
     const q = storeQuery.trim().toLowerCase();
@@ -40,10 +41,15 @@ export default function LoginScreen({
   const submit = () => {
     const trimmed = nickname.trim();
     if (trimmed.length < 2 || trimmed.length > 12) {
-      setError("Nickname must be 2-12 characters.");
+      setNicknameError("Nickname must be 2-12 characters.");
       return;
     }
-    setError(null);
+    if (!selectedStore.trim()) {
+      setStoreError("Please select a store.");
+      return;
+    }
+    setNicknameError(null);
+    setStoreError(null);
     onLogin(trimmed);
   };
 
@@ -61,12 +67,15 @@ export default function LoginScreen({
           <input
             id="login-nickname"
             value={nickname}
-            onChange={(e) => setNickname(e.target.value)}
+            onChange={(e) => {
+              setNickname(e.target.value);
+              if (nicknameError) setNicknameError(null);
+            }}
             maxLength={12}
             placeholder="2-12 characters"
             className="mt-1 w-full rounded-xl border border-[#f3bdd8] bg-[#fff9fc] px-3 py-2 text-sm font-semibold text-[#4b0f31] outline-none focus:border-[#960953]"
           />
-          {error ? <p className="mt-2 text-xs font-bold text-[#c13f63]">{error}</p> : null}
+          {nicknameError ? <p className="mt-2 text-xs font-bold text-[#c13f63]">{nicknameError}</p> : null}
 
           <label htmlFor="login-store" className="mt-4 block text-xs font-black uppercase tracking-[0.14em] text-[#960953]">
             Store
@@ -81,15 +90,22 @@ export default function LoginScreen({
           <select
             id="login-store"
             value={selectedStore}
-            onChange={(e) => onStoreChange(e.target.value)}
+            onChange={(e) => {
+              onStoreChange(e.target.value);
+              if (e.target.value.trim()) {
+                setStoreError(null);
+              }
+            }}
             className="mt-1 w-full rounded-xl border border-[#f3bdd8] bg-[#fff9fc] px-3 py-2 text-sm font-semibold text-[#4b0f31] outline-none focus:border-[#960953]"
           >
+            <option value="">Select a store</option>
             {filteredStores.map((store) => (
               <option key={store} value={store}>
                 {store}
               </option>
             ))}
           </select>
+          {storeError ? <p className="mt-1 text-xs font-bold text-[#c13f63]">{storeError}</p> : null}
           {filteredStores.length === 0 ? (
             <p className="mt-1 text-xs font-bold text-[#8d5b76]">No matching stores.</p>
           ) : null}

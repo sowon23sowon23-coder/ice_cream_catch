@@ -219,7 +219,7 @@ export default function Page() {
   const [lbLoading, setLbLoading] = useState(false);
 
   const [mode, setMode] = useState<LeaderMode>("today");
-  const [selectedStore, setSelectedStore] = useState<string>(STORE_OPTIONS[0] ?? "Yogurtland Demo Vendor");
+  const [selectedStore, setSelectedStore] = useState<string>("");
 
   const [lastScore, setLastScore] = useState<number | undefined>(undefined);
   const [lastNick, setLastNick] = useState<string | undefined>(undefined);
@@ -239,10 +239,6 @@ export default function Page() {
     const b = Number(localStorage.getItem("bestScore") || 0);
     setBest(b);
     setLastNick(localStorage.getItem("nickname") ?? undefined);
-    const savedStore = localStorage.getItem("selectedStore");
-    if (savedStore && STORE_OPTIONS.includes(savedStore)) {
-      setSelectedStore(savedStore);
-    }
   }, [phase]);
 
   useEffect(() => {
