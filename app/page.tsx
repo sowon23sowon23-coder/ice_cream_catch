@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { trackEvent } from "./lib/gtag";
+import LoginScreen from "./components/LoginScreen";
 import HomeScreen from "./components/HomeScreen";
 import Game from "./components/Game";
 import LeaderboardModal, { LeaderMode, LeaderRow } from "./components/LeaderboardModal";
@@ -9,7 +10,7 @@ import { supabase } from "./lib/supabaseClient";
 import { STORE_OPTIONS } from "./lib/stores";
 
 type CharId = "green" | "berry" | "sprinkle";
-type Phase = "home" | "game";
+type Phase = "login" | "home" | "game";
 type GameMode = "free" | "mission" | "timeAttack";
 
 type DbRow = {
@@ -19,6 +20,13 @@ type DbRow = {
   updated_at: string;
   character?: CharId;
   store?: string;
+};
+
+type MyScoreRow = {
+  score: number;
+  nickname_display: string;
+  character?: CharId | null;
+  store?: string | null;
 };
 
 function normalizeNick(raw: string) {
@@ -40,7 +48,9 @@ async function fetchMyBestScore(nicknameDisplay: string, selectedStore: string) 
       query = query.eq("store", selectedStore);
     }
 
-    let { data, error } = await query;
+    const initial = await query;
+    let data = (initial.data as MyScoreRow[] | null) ?? null;
+    let error = initial.error;
 
     // Fallback attempts if first query fails
     if (error && !data) {
@@ -80,7 +90,7 @@ async function fetchMyBestScore(nicknameDisplay: string, selectedStore: string) 
       for (const fallback of fallbacks) {
         const result = await fallback();
         if (!result.error && result.data) {
-          data = result.data;
+          data = (result.data as MyScoreRow[] | null) ?? null;
           error = null;
           break;
         }
@@ -90,7 +100,7 @@ async function fetchMyBestScore(nicknameDisplay: string, selectedStore: string) 
     if (error) throw error;
     if (!data || data.length === 0) return undefined;
 
-    const row = data[0] as { score: number; nickname_display: string; character?: CharId | null; store?: string | null };
+    const row = data[0];
     return {
       score: row.score,
       display: row.nickname_display,
@@ -120,7 +130,9 @@ async function fetchMyTodayScore(nicknameDisplay: string, selectedStore: string)
       query = query.eq("store", selectedStore);
     }
 
-    let { data, error } = await query;
+    const initial = await query;
+    let data = (initial.data as MyScoreRow[] | null) ?? null;
+    let error = initial.error;
 
     if (error && !data) {
       const fallbacks = [
@@ -165,7 +177,7 @@ async function fetchMyTodayScore(nicknameDisplay: string, selectedStore: string)
       for (const fallback of fallbacks) {
         const result = await fallback();
         if (!result.error && result.data) {
-          data = result.data;
+          data = (result.data as MyScoreRow[] | null) ?? null;
           error = null;
           break;
         }
@@ -175,7 +187,7 @@ async function fetchMyTodayScore(nicknameDisplay: string, selectedStore: string)
     if (error) throw error;
     if (!data || data.length === 0) return undefined;
 
-    const row = data[0] as { score: number; nickname_display: string; character?: CharId | null; store?: string | null };
+    const row = data[0];
     return {
       score: row.score,
       display: row.nickname_display,
@@ -195,11 +207,12 @@ function startOfTodayLocalISO() {
 }
 
 export default function Page() {
-  const [phase, setPhase] = useState<Phase>("home");
+  const [phase, setPhase] = useState<Phase>("login");
   const [character, setCharacter] = useState<CharId>("green");
   const [gameMode, setGameMode] = useState<GameMode>("free");
   const [best, setBest] = useState(0);
   const [startSignal, setStartSignal] = useState(0);
+  const [authNick, setAuthNick] = useState<string | undefined>(undefined);
 
   const [lbOpen, setLbOpen] = useState(false);
   const [lbRows, setLbRows] = useState<LeaderRow[]>([]);
@@ -211,6 +224,17 @@ export default function Page() {
   const [lastScore, setLastScore] = useState<number | undefined>(undefined);
   const [lastNick, setLastNick] = useState<string | undefined>(undefined);
   const [myRank, setMyRank] = useState<number | undefined>(undefined);
+
+  useEffect(() => {
+    const savedNick = (localStorage.getItem("nickname") || "").trim();
+    if (savedNick.length >= 2 && savedNick.length <= 12) {
+      setAuthNick(savedNick);
+      setPhase("home");
+    } else {
+      setAuthNick(undefined);
+      setPhase("login");
+    }
+  }, []);
 
   useEffect(() => {
     const b = Number(localStorage.getItem("bestScore") || 0);
@@ -245,7 +269,9 @@ export default function Page() {
         query = query.gte("updated_at", startOfTodayLocalISO());
       }
 
-      let { data, error } = await query;
+      const initial = await query;
+      let data = (initial.data as DbRow[] | null) ?? null;
+      let error = initial.error;
 
       // Fallback attempts if first query fails
       if (error && !data) {
@@ -288,7 +314,7 @@ export default function Page() {
         for (const fallback of fallbacks) {
           const result = await fallback();
           if (!result.error && result.data) {
-            data = result.data;
+            data = (result.data as DbRow[] | null) ?? null;
             error = null;
             break;
           }
@@ -541,6 +567,14 @@ export default function Page() {
     }
   };
 
+  const onLogin = (nickname: string) => {
+    const trimmed = nickname.trim();
+    localStorage.setItem("nickname", trimmed);
+    setAuthNick(trimmed);
+    setLastNick(trimmed);
+    setPhase("home");
+  };
+
   return (
     <>
       <main className="fixed inset-0 overflow-auto bg-[radial-gradient(circle_at_15%_5%,#ffffff_0%,#ffeef8_35%,#f8d5e8_100%)] flex items-center justify-center p-4">
@@ -552,8 +586,11 @@ export default function Page() {
               minHeight: phase === "game" ? "auto" : 844,
             }}
           >
+            {phase === "login" && <LoginScreen initialNickname={authNick ?? ""} onLogin={onLogin} />}
+
             {phase === "home" && (
               <HomeScreen
+                nickname={authNick}
                 bestScore={best}
                 stores={STORE_OPTIONS}
                 selectedStore={selectedStore}
@@ -561,7 +598,7 @@ export default function Page() {
                 onStart={(char: CharId, mode: GameMode) => {
                   setCharacter(char);
                   setGameMode(mode);
-                  setLastNick(localStorage.getItem("nickname") ?? undefined);
+                  setLastNick(authNick ?? localStorage.getItem("nickname") ?? undefined);
                   setPhase("game");
                   setStartSignal((n) => n + 1);
                 }}

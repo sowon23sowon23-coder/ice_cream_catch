@@ -32,6 +32,7 @@ const MODES: ModeOption[] = [
 ];
 
 export default function HomeScreen({
+  nickname,
   bestScore,
   stores,
   selectedStore,
@@ -39,6 +40,7 @@ export default function HomeScreen({
   onStart,
   onOpenLeaderboard,
 }: {
+  nickname?: string;
   bestScore: number;
   stores: string[];
   selectedStore: string;
@@ -48,15 +50,11 @@ export default function HomeScreen({
 }) {
   const [character, setCharacter] = useState<CharId>("green");
   const [mode, setMode] = useState<GameMode>("free");
-  const [nickname, setNickname] = useState("");
-  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const savedNick = (localStorage.getItem("nickname") || "").trim();
     const savedChar = localStorage.getItem("selectedCharacter") as CharId | null;
     const savedMode = localStorage.getItem("selectedMode") as GameMode | null;
 
-    if (savedNick) setNickname(savedNick);
     if (savedChar && CHARACTERS.some((c) => c.id === savedChar)) setCharacter(savedChar);
     if (savedMode && MODES.some((m) => m.id === savedMode)) setMode(savedMode);
   }, []);
@@ -67,14 +65,6 @@ export default function HomeScreen({
   );
 
   const startGame = () => {
-    const trimmed = nickname.trim();
-    if (trimmed.length < 2 || trimmed.length > 12) {
-      setError("Nickname must be 2-12 characters.");
-      return;
-    }
-
-    setError(null);
-    localStorage.setItem("nickname", trimmed);
     localStorage.setItem("selectedCharacter", character);
     localStorage.setItem("selectedMode", mode);
 
@@ -111,6 +101,12 @@ export default function HomeScreen({
             Leaderboard
           </button>
         </header>
+
+        {nickname ? (
+          <p className="mb-3 text-xs font-black uppercase tracking-[0.12em] text-[#7d3f61]">
+            Logged in as <span className="text-[#960953]">{nickname}</span>
+          </p>
+        ) : null}
 
         <section className="mb-4 rounded-3xl border border-[#f8d2e4] bg-white/85 p-5 shadow-[0_16px_40px_rgba(150,9,83,0.16)] backdrop-blur-sm">
           <h2 className="mt-1 text-3xl font-black leading-[1.08] text-[#4b0b31]">Catch. Score. Celebrate.</h2>
@@ -194,19 +190,6 @@ export default function HomeScreen({
         </section>
 
         <section className="mt-auto rounded-2xl border border-[#f8d2e4] bg-white/85 p-3 shadow-[0_8px_22px_rgba(150,9,83,0.14)]">
-          <label htmlFor="nickname" className="mb-1 block text-xs font-black uppercase tracking-[0.14em] text-[#960953]">
-            Nickname
-          </label>
-          <input
-            id="nickname"
-            value={nickname}
-            onChange={(e) => setNickname(e.target.value)}
-            maxLength={12}
-            placeholder="2-12 characters"
-            className="w-full rounded-xl border border-[#f3bdd8] bg-[#fff9fc] px-3 py-2 text-sm font-semibold text-[#4b0f31] outline-none focus:border-[#960953]"
-          />
-          {error ? <p className="mt-1 text-xs font-bold text-[#c13f63]">{error}</p> : null}
-
           <button
             type="button"
             onClick={startGame}
