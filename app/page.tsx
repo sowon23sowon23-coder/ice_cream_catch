@@ -586,8 +586,8 @@ export default function Page() {
             }`}
             style={{
               width: "100%",
-              height: phase === "home" ? 844 : "auto",
-              minHeight: phase === "home" ? 844 : "auto",
+              height: phase === "home" ? "min(844px, calc(100dvh - 2rem))" : "auto",
+              minHeight: phase === "home" ? "min(844px, calc(100dvh - 2rem))" : "auto",
             }}
           >
             {phase === "login" && (
