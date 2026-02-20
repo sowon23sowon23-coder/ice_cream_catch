@@ -4,9 +4,15 @@ import { useState } from "react";
 
 export default function LoginScreen({
   initialNickname = "",
+  stores,
+  selectedStore,
+  onStoreChange,
   onLogin,
 }: {
   initialNickname?: string;
+  stores: string[];
+  selectedStore: string;
+  onStoreChange: (store: string) => void;
   onLogin: (nickname: string) => void;
 }) {
   const [nickname, setNickname] = useState(initialNickname);
@@ -45,6 +51,22 @@ export default function LoginScreen({
             className="mt-1 w-full rounded-xl border border-[#f3bdd8] bg-[#fff9fc] px-3 py-2 text-sm font-semibold text-[#4b0f31] outline-none focus:border-[#960953]"
           />
           {error ? <p className="mt-2 text-xs font-bold text-[#c13f63]">{error}</p> : null}
+
+          <label htmlFor="login-store" className="mt-4 block text-xs font-black uppercase tracking-[0.14em] text-[#960953]">
+            Store
+          </label>
+          <select
+            id="login-store"
+            value={selectedStore}
+            onChange={(e) => onStoreChange(e.target.value)}
+            className="mt-1 w-full rounded-xl border border-[#f3bdd8] bg-[#fff9fc] px-3 py-2 text-sm font-semibold text-[#4b0f31] outline-none focus:border-[#960953]"
+          >
+            {stores.map((store) => (
+              <option key={store} value={store}>
+                {store}
+              </option>
+            ))}
+          </select>
 
           <button
             type="button"

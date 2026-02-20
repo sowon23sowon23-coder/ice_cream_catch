@@ -586,7 +586,15 @@ export default function Page() {
               minHeight: phase === "game" ? "auto" : 844,
             }}
           >
-            {phase === "login" && <LoginScreen initialNickname={authNick ?? ""} onLogin={onLogin} />}
+            {phase === "login" && (
+              <LoginScreen
+                initialNickname={authNick ?? ""}
+                stores={STORE_OPTIONS}
+                selectedStore={selectedStore}
+                onStoreChange={setSelectedStore}
+                onLogin={onLogin}
+              />
+            )}
 
             {phase === "home" && (
               <HomeScreen
