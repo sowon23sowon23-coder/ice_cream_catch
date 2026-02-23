@@ -876,13 +876,13 @@ export default function Game({
       {/* ── Time Attack Final Reveal Screen ── */}
       {phase === "over" && mode === "timeAttack" && (
         <div
-          className="fixed inset-0 z-50 flex flex-col items-center justify-center overflow-auto py-6"
+          className="fixed inset-0 z-50 flex items-center justify-center overflow-hidden px-3 py-3 sm:py-6"
           style={{
             background:
               "radial-gradient(circle at 50% 0%, #fff8fc 0%, #fce4f0 50%, #f3c0db 100%)",
           }}
         >
-          <div className="reveal-fade-in flex w-full max-w-xs flex-col items-center gap-5 px-4 text-center">
+          <div className="reveal-fade-in flex h-[100dvh] max-h-[100dvh] w-full max-w-sm flex-col items-center justify-between gap-3 px-3 py-2 text-center sm:h-auto sm:max-h-none sm:max-w-xs sm:gap-5 sm:px-4 sm:py-0">
             {/* Header */}
             <div>
               <p className="text-[11px] font-black uppercase tracking-[0.22em] text-[#960953]">
@@ -901,13 +901,13 @@ export default function Game({
             </div>
 
             {/* Score badge */}
-            <div className="rounded-2xl bg-white/85 px-10 py-3 shadow ring-1 ring-[#f4c2db]">
+            <div className="rounded-2xl bg-white/85 px-8 py-2 shadow ring-1 ring-[#f4c2db] sm:px-10 sm:py-3">
               <p className="text-[10px] font-black uppercase tracking-widest text-[#960953]">Score</p>
-              <p className="text-5xl font-black text-[#4b0b31]">{score}</p>
+              <p className="text-4xl font-black text-[#4b0b31] sm:text-5xl">{score}</p>
             </div>
 
             {/* Cup + toppings */}
-            <div className="relative h-[32rem] w-[28rem] max-w-full">
+            <div className="relative h-72 w-64 max-w-full sm:h-[32rem] sm:w-[28rem]">
               {!finalCupLoadFailed ? (
                 <img
                   src="/final-cup.png?v=20260223"
@@ -959,7 +959,7 @@ export default function Game({
             </div>
 
             {/* Buttons */}
-            <div className="flex w-full flex-col gap-3">
+            <div className="flex w-full flex-col gap-2.5 sm:gap-3">
               <button
                 type="button"
                 onClick={() => {
@@ -968,7 +968,7 @@ export default function Game({
                     onGameOver?.(score);
                   }
                 }}
-                className="w-full rounded-2xl bg-[#960953] py-3 text-sm font-black text-white shadow-[0_10px_24px_rgba(150,9,83,0.35)] transition active:scale-95"
+                className="w-full rounded-2xl bg-[#960953] py-2.5 text-sm font-black text-white shadow-[0_10px_24px_rgba(150,9,83,0.35)] transition active:scale-95 sm:py-3"
               >
                 🏆 See Leaderboard
               </button>
@@ -976,7 +976,7 @@ export default function Game({
               <button
                 type="button"
                 onClick={start}
-                className="w-full rounded-2xl border-2 border-[#f2bfd9] bg-white py-3 text-sm font-black text-[#960953] transition active:scale-95"
+                className="w-full rounded-2xl border-2 border-[#f2bfd9] bg-white py-2.5 text-sm font-black text-[#960953] transition active:scale-95 sm:py-3"
               >
                 Retry
               </button>
@@ -984,7 +984,7 @@ export default function Game({
               <button
                 type="button"
                 onClick={handleShare}
-                className="w-full rounded-2xl border border-[#f2bfd9] bg-white/70 py-3 text-sm font-bold text-[#6f2b50] transition active:scale-95"
+                className="w-full rounded-2xl border border-[#f2bfd9] bg-white/70 py-2.5 text-sm font-bold text-[#6f2b50] transition active:scale-95 sm:py-3"
               >
                 Share
               </button>
