@@ -25,8 +25,7 @@ type MissionItemImage = string;
 
 type FallingItem = { id: number; x: number; y: number; v: number; emoji?: string; image?: string };
 type Pop = { id: number; x: number; y: number; text: string; born: number };
-type CaughtItem = { id: number; emoji?: string; image?: string };
-type ToppingSlot = { x: number; y: number; rotate: number; scale: number };
+type CaughtItem = { id: number; emoji?: string; image?: string; x: number; y: number; rotate: number; scale: number };
 
 const GAME_BG_CANDIDATES = [
   "/game-bg-1.jpg",
@@ -41,12 +40,6 @@ const DEFAULT_GAME_BG =
   "radial-gradient(circle at 18% 18%, rgba(255,255,255,0.48), transparent 36%), linear-gradient(180deg, #99dcff 0%, #70c9ff 48%, #4ca6e8 100%)";
 const FREE_DIFFICULTY_STEP = 20;
 const FREE_SPEED_PER_LEVEL = 0.15;
-const TIME_ATTACK_TOPPING_SLOTS: ToppingSlot[] = [
-  { x: 19, y: 10, rotate: -10, scale: 1.05 },
-  { x: 13, y: 38, rotate: -8, scale: 1.1 },
-  { x: 63, y: 62, rotate: 8, scale: 1.15 },
-  { x: 96, y: 61, rotate: 12, scale: 1.05 },
-];
 
 function randomMissionTargetsFrom(images: readonly string[]) {
   if (images.length === 0) return [];
@@ -521,6 +514,10 @@ export default function Game({
                   id: item.id,
                   emoji: item.emoji,
                   image: item.image,
+                  x: 15 + Math.random() * 70,
+                  y: 8 + Math.random() * 50,
+                  rotate: Math.random() * 40 - 20,
+                  scale: 0.8 + Math.random() * 0.45,
                 });
               }
             }
@@ -925,22 +922,17 @@ export default function Game({
                   <span className="text-7xl">🍨</span>
                 </div>
               )}
-              {collectedToppings
-                .filter((t) => Boolean(t.image))
-                .slice(0, TIME_ATTACK_TOPPING_SLOTS.length)
-                .map((t, i) => {
-                  const slot = TIME_ATTACK_TOPPING_SLOTS[i];
-                  return (
+              {collectedToppings.slice(0, 22).map((t, i) => (
                 <div
                   key={t.id}
                   className="pointer-events-none absolute -translate-x-1/2 -translate-y-1/2"
-                  style={{ left: `${slot.x}%`, top: `${slot.y}%` }}
+                  style={{ left: `${t.x}%`, top: `${t.y}%` }}
                 >
                   <div
                     className="topping-reveal"
                     style={
                       {
-                        "--rot": `${slot.rotate}deg`,
+                        "--rot": `${t.rotate}deg`,
                         animationDelay: `${i * 55}ms`,
                       } as CSSProperties
                     }
@@ -951,20 +943,19 @@ export default function Game({
                         alt=""
                         className="h-7 w-7"
                         draggable={false}
-                        style={{ transform: `scale(${slot.scale})` }}
+                        style={{ transform: `scale(${t.scale})` }}
                       />
                     ) : (
                       <span
                         className="text-2xl leading-none"
-                        style={{ display: "block", transform: `scale(${slot.scale})` }}
+                        style={{ display: "block", transform: `scale(${t.scale})` }}
                       >
                         {t.emoji}
                       </span>
                     )}
                   </div>
                 </div>
-                  );
-                })}
+              ))}
             </div>
 
             {/* Buttons */}
