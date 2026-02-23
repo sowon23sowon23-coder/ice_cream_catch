@@ -749,6 +749,22 @@ export default function Game({
           )}
         </div>
 
+        {/* Time Attack progress bar */}
+        {mode === "timeAttack" && (
+          <div className="mb-3 h-3 w-full overflow-hidden rounded-full bg-white/40 shadow-inner">
+            <div
+              className={`h-full rounded-full transition-all duration-1000 ease-linear ${
+                timeLeft <= 2
+                  ? "bg-red-500"
+                  : timeLeft <= 4
+                    ? "bg-orange-400"
+                    : "bg-[#960953]"
+              }`}
+              style={{ width: `${(timeLeft / 5) * 100}%` }}
+            />
+          </div>
+        )}
+
         {mode === "mission" && missionTargets.length > 0 && (
           <div className="mb-3 rounded-2xl bg-amber-50 border border-amber-200 px-4 py-2 text-center text-sm font-bold text-amber-900">
             <p>Catch only:</p>
