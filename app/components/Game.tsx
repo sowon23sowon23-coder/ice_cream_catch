@@ -44,6 +44,7 @@ const FREE_BASE_FALL_SPEED_MIN = 0.7;
 const FREE_BASE_FALL_SPEED_RANGE = 1.15;
 const DEFAULT_BASE_FALL_SPEED_MIN = 1.2;
 const DEFAULT_BASE_FALL_SPEED_RANGE = 2.4;
+const MISSION_GOAL_SCORE = 10;
 const TIME_ATTACK_CREAM_ZONES: CreamZone[] = [
   { minX: 44, maxX: 56, minY: 10, maxY: 20 },
   { minX: 33, maxX: 66, minY: 20, maxY: 30 },
@@ -192,6 +193,7 @@ export default function Game({
   const scoreRef = useRef(0);
   const collectedRef = useRef<CaughtItem[]>([]);
   const leaderboardOpenedRef = useRef(false);
+  const lastWarningVibrateRef = useRef<number | null>(null);
 
   const missionSet = useMemo(() => new Set(missionTargets), [missionTargets]);
   const isPaused = false;
@@ -521,6 +523,14 @@ export default function Game({
 
   useEffect(() => {
     if (phase !== "play") return;
+    if (mode !== "mission") return;
+    if (score < MISSION_GOAL_SCORE) return;
+    finishGame();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mode, phase, score]);
+
+  useEffect(() => {
+    if (phase !== "play") return;
     if (mode !== "timeAttack") return;
     if (timeLeft > 0) return;
     finishGame();
@@ -537,6 +547,21 @@ export default function Game({
 
     return () => clearInterval(timer);
   }, [mode, phase]);
+
+  useEffect(() => {
+    if (mode !== "timeAttack" || phase !== "play") {
+      lastWarningVibrateRef.current = null;
+      return;
+    }
+    if (timeLeft <= 0 || timeLeft > 10) return;
+    if (lastWarningVibrateRef.current === timeLeft) return;
+
+    lastWarningVibrateRef.current = timeLeft;
+    if ("vibrate" in navigator) {
+      const pattern = timeLeft <= 5 ? [80, 40, 80] : [60];
+      navigator.vibrate(pattern);
+    }
+  }, [mode, phase, timeLeft]);
 
   useEffect(() => {
     if (phase !== "play") {
@@ -728,6 +753,14 @@ export default function Game({
           animation: toppingReveal 0.45s ease-out forwards;
           opacity: 0;
         }
+        @keyframes warningPulse {
+          0%   { opacity: 0.06; }
+          50%  { opacity: 0.26; }
+          100% { opacity: 0.06; }
+        }
+        .warning-pulse {
+          animation: warningPulse 0.8s ease-in-out infinite;
+        }
         @keyframes revealFadeIn {
           from { opacity: 0; transform: translateY(18px); }
           to   { opacity: 1; transform: translateY(0); }
@@ -799,6 +832,15 @@ export default function Game({
 
         {mode === "mission" && missionTargets.length > 0 && (
           <div className="mb-3 rounded-2xl bg-amber-50 border border-amber-200 px-4 py-2 text-center text-sm font-bold text-amber-900">
+            <p className="text-[11px] font-black uppercase tracking-[0.16em] text-amber-700">
+              Mission Progress: {Math.min(score, MISSION_GOAL_SCORE)}/{MISSION_GOAL_SCORE}
+            </p>
+            <div className="mx-auto mt-2 h-2 w-full max-w-[220px] overflow-hidden rounded-full bg-amber-100 ring-1 ring-amber-200">
+              <div
+                className="h-full rounded-full bg-amber-500 transition-all duration-300"
+                style={{ width: `${(Math.min(score, MISSION_GOAL_SCORE) / MISSION_GOAL_SCORE) * 100}%` }}
+              />
+            </div>
             <p>Catch only:</p>
             <div className="mt-2 flex items-center justify-center gap-2">
               {missionTargets.map((target) => (
@@ -854,6 +896,14 @@ export default function Game({
 
           <div className="absolute inset-x-0 bottom-0 h-28 bg-gradient-to-t from-white/30 to-transparent pointer-events-none z-0" />
 
+          {mode === "timeAttack" && phase === "play" && timeLeft <= 10 && timeLeft > 0 && (
+            <div
+              className={`pointer-events-none absolute inset-0 z-10 ${
+                timeLeft <= 5 ? "warning-pulse bg-red-500/25" : "warning-pulse bg-orange-400/18"
+              }`}
+            />
+          )}
+
           {mode === "free" && phase === "play" && difficultyNotice && (
             <div className="absolute top-4 left-1/2 -translate-x-1/2 z-30 rounded-full bg-fuchsia-600/90 text-white text-xs font-extrabold px-4 py-2 shadow-lg">
               {difficultyNotice}
@@ -892,9 +942,15 @@ export default function Game({
 
           {(phase === "idle" || (phase === "over" && mode !== "timeAttack")) && (
             <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-white/55 backdrop-blur-sm">
-              <div className="text-5xl mb-3">{phase === "over" ? "💥" : "🍨"}</div>
+              <div className="text-5xl mb-3">
+                {phase === "over" ? (mode === "mission" && score >= MISSION_GOAL_SCORE ? "🏆" : "💥") : "🍨"}
+              </div>
               <div className="text-xl font-extrabold text-pink-600 mb-2">
-                {phase === "over" ? "Game Over!" : "Loading..."}
+                {phase === "over"
+                  ? mode === "mission" && score >= MISSION_GOAL_SCORE
+                    ? "Mission Complete!"
+                    : "Game Over!"
+                  : "Loading..."}
               </div>
 
               <div className="mb-5 flex flex-col items-center">
