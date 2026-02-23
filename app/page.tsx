@@ -684,22 +684,21 @@ export default function Page() {
                     selectedStore === "__ALL__"
                       ? (localStorage.getItem("selectedStore") || STORE_OPTIONS[0] || "")
                       : selectedStore;
+                  const leaderboardMode: LeaderMode = "today";
 
                   setLbOpen(true);
                   setLbLoading(true);
+                  setMode(leaderboardMode);
                   setLastNick(nick || undefined);
 
                   if (nick.length >= 2 && nick.length <= 12) {
                     await upsertBestScore(nick, finalScore, character, scoreStore);
 
-                    const mine =
-                      mode === "today"
-                        ? await fetchMyTodayScore(nick, selectedStore)
-                        : await fetchMyBestScore(nick, selectedStore);
+                    const mine = await fetchMyTodayScore(nick, selectedStore);
 
                     if (mine) {
                       setLastScore(mine.score);
-                      await calcMyRank(mode, mine.score, selectedStore);
+                      await calcMyRank(leaderboardMode, mine.score, selectedStore);
                     } else {
                       setLastScore(undefined);
                       setMyRank(undefined);
@@ -709,7 +708,7 @@ export default function Page() {
                     setMyRank(undefined);
                   }
 
-                  await fetchTop20(mode, selectedStore);
+                  await fetchTop20(leaderboardMode, selectedStore);
                 }}
               />
             )}
