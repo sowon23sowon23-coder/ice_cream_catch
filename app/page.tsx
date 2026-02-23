@@ -684,12 +684,19 @@ export default function Page() {
                   const normalizedStore =
                     selectedStore && selectedStore !== "__ALL__" ? selectedStore : fallbackStore;
                   const leaderboardMode: LeaderMode = "today";
+                  const todayKey = `todayBest:${normalizeNick(nick || "guest")}:${normalizedStore}:${
+                    startOfTodayLocalISO().slice(0, 10)
+                  }`;
+                  const prevTodayBest = Number(localStorage.getItem(todayKey) || 0);
+                  const todayBestLocal = Math.max(prevTodayBest, finalScore);
+                  localStorage.setItem(todayKey, String(todayBestLocal));
 
                   setLbOpen(true);
                   setLbLoading(true);
                   setMode(leaderboardMode);
                   setSelectedStore(normalizedStore);
-                  setLastNick(nick || undefined);
+                  setLastNick(nick || "YOU");
+                  setLastScore(todayBestLocal);
 
                   if (nick.length >= 2 && nick.length <= 12) {
                     await upsertBestScore(nick, finalScore, character, normalizedStore);
@@ -697,14 +704,14 @@ export default function Page() {
                     const mine = await fetchMyTodayScore(nick, normalizedStore);
 
                     if (mine) {
-                      setLastScore(mine.score);
+                      setLastScore(Math.max(todayBestLocal, mine.score));
                       await calcMyRank(leaderboardMode, mine.score, normalizedStore);
                     } else {
-                      setLastScore(undefined);
+                      setLastScore(todayBestLocal);
                       setMyRank(undefined);
                     }
                   } else {
-                    setLastScore(undefined);
+                    setLastScore(todayBestLocal);
                     setMyRank(undefined);
                   }
 

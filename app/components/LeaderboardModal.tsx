@@ -61,6 +61,19 @@ export default function LeaderboardModal({
   if (!open) return null;
 
   const inTop20 = myRank !== undefined ? myRank <= 20 : false;
+  const myNickLower = myNickname?.trim().toLowerCase();
+  const hasMyRow =
+    !!myNickLower && rows.some((r) => r.nickname.trim().toLowerCase() === myNickLower);
+  const mergedRows: LeaderRow[] =
+    mode === "today" && myNickname && myScore !== undefined && !hasMyRow
+      ? rows.concat([
+          {
+            rank: myRank ?? Math.max(21, rows.length + 1),
+            nickname: myNickname,
+            score: myScore,
+          },
+        ])
+      : rows;
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
@@ -154,13 +167,13 @@ export default function LeaderboardModal({
               <div className="text-right">SCORE</div>
             </div>
 
-            {loading ? (
+            {loading && mergedRows.length === 0 ? (
               <div className="px-4 py-6 text-sm font-semibold text-[#8b6178]">Loading...</div>
-            ) : rows.length === 0 ? (
+            ) : mergedRows.length === 0 ? (
               <div className="px-4 py-6 text-sm font-semibold text-[#8b6178]">No scores yet.</div>
             ) : (
               <div className="max-h-[360px] overflow-auto bg-white">
-                {rows.map((r) => {
+                {mergedRows.map((r) => {
                   const isMe =
                     myNickname && r.nickname.trim().toLowerCase() === myNickname.trim().toLowerCase();
 
@@ -195,17 +208,6 @@ export default function LeaderboardModal({
               </div>
             )}
           </div>
-
-          {mode === "today" && myRank !== undefined && myScore !== undefined && myNickname && (
-            <div className="mt-3 rounded-2xl border border-[#f2c2da] bg-[#fff4fa] px-4 py-3">
-              <p className="text-xs font-black uppercase tracking-[0.14em] text-[#960953]">Your Today Rank</p>
-              <div className="mt-2 grid grid-cols-[70px_1fr_84px] items-center text-sm">
-                <div className="font-black text-[#6b1f49]">#{myRank}</div>
-                <div className="truncate font-bold text-[#4e1434]">{myNickname}</div>
-                <div className="text-right font-black text-[#7d1148]">{myScore}</div>
-              </div>
-            </div>
-          )}
 
           <button
             onClick={onClose}
