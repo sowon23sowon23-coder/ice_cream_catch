@@ -64,6 +64,43 @@ function imageScaleBoost(image?: string) {
   return 1;
 }
 
+function pickCreamPlacementAvoidOverlap(existing: CaughtItem[], image?: string) {
+  // Try many random candidates and keep the one with the best spacing.
+  let best = randomCreamToppingPlacement();
+  let bestSpacingScore = Number.NEGATIVE_INFINITY;
+
+  for (let i = 0; i < 40; i += 1) {
+    const candidate = randomCreamToppingPlacement();
+    const candidateScale = candidate.scale * imageScaleBoost(image);
+    let minSpacing = Number.POSITIVE_INFINITY;
+
+    for (const placed of existing) {
+      const dx = candidate.x - placed.x;
+      const dy = candidate.y - placed.y;
+      const centerDistance = Math.hypot(dx, dy);
+      const placedScale = placed.scale * imageScaleBoost(placed.image);
+      const requiredDistance = 6.4 + candidateScale * 2.4 + placedScale * 2.4;
+      const spacing = centerDistance - requiredDistance;
+      if (spacing < minSpacing) minSpacing = spacing;
+    }
+
+    if (existing.length === 0) {
+      return candidate;
+    }
+
+    if (minSpacing > bestSpacingScore) {
+      best = candidate;
+      bestSpacingScore = minSpacing;
+    }
+
+    if (minSpacing >= 0) {
+      return candidate;
+    }
+  }
+
+  return best;
+}
+
 function randomMissionTargetsFrom(images: readonly string[]) {
   if (images.length === 0) return [];
   const maxCount = Math.min(5, images.length);
@@ -533,7 +570,7 @@ export default function Game({
               });
               // Track caught items for Time Attack reveal screen
               if (mode === "timeAttack") {
-                const placement = randomCreamToppingPlacement();
+                const placement = pickCreamPlacementAvoidOverlap(collectedRef.current, item.image);
                 collectedRef.current.push({
                   id: item.id,
                   emoji: item.emoji,
