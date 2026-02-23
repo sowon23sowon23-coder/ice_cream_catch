@@ -64,6 +64,15 @@ function imageScaleBoost(image?: string) {
   return 1;
 }
 
+function loadImage(src: string) {
+  return new Promise<HTMLImageElement>((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = () => reject(new Error(`Failed to load image: ${src}`));
+    img.src = src;
+  });
+}
+
 function pickCreamPlacementAvoidOverlap(existing: CaughtItem[], image?: string) {
   // Try many random candidates and keep the one with the best spacing.
   let best = randomCreamToppingPlacement();
@@ -405,6 +414,47 @@ export default function Game({
 
   const PLAYER_W = 80;
 
+  const createTimeAttackShareFile = async () => {
+    const size = 1080;
+    const baseToppingPx = 82;
+    const canvas = document.createElement("canvas");
+    canvas.width = size;
+    canvas.height = size;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return null;
+
+    try {
+      const cup = await loadImage("/final-cup.png?v=20260223");
+      ctx.drawImage(cup, 0, 0, size, size);
+
+      const toppings = collectedToppings.filter((t) => Boolean(t.image)).slice(0, 22);
+      for (const t of toppings) {
+        if (!t.image) continue;
+        const topping = await loadImage(`/${t.image}`);
+        const finalScale = t.scale * imageScaleBoost(t.image);
+        const drawW = baseToppingPx * finalScale;
+        const drawH = baseToppingPx * finalScale;
+        const x = (t.x / 100) * size;
+        const y = (t.y / 100) * size;
+
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.rotate((t.rotate * Math.PI) / 180);
+        ctx.drawImage(topping, -drawW / 2, -drawH / 2, drawW, drawH);
+        ctx.restore();
+      }
+
+      const blob = await new Promise<Blob | null>((resolve) =>
+        canvas.toBlob((b) => resolve(b), "image/png", 0.95)
+      );
+      if (!blob) return null;
+
+      return new File([blob], `ice-cream-cup-${Date.now()}.png`, { type: "image/png" });
+    } catch {
+      return null;
+    }
+  };
+
   const handleShare = async () => {
     const url = window.location.href;
     const title = "Ice Cream Catcher";
@@ -414,6 +464,23 @@ export default function Game({
 
     try {
       if (navigator.share) {
+        if (mode === "timeAttack" && phase === "over") {
+          const shareFile = await createTimeAttackShareFile();
+          if (shareFile) {
+            try {
+              const canShareFiles =
+                typeof navigator.canShare !== "function" || navigator.canShare({ files: [shareFile] });
+              if (canShareFiles) {
+                await navigator.share({ title, text, url, files: [shareFile] });
+                setShareNotice("Image shared successfully.");
+                return;
+              }
+            } catch {
+              // Fall through to link share if file share is not supported.
+            }
+          }
+        }
+
         await navigator.share({ title, text, url });
         setShareNotice("Shared successfully.");
         return;
