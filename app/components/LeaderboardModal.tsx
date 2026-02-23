@@ -65,7 +65,7 @@ export default function LeaderboardModal({
   const hasMyRow =
     !!myNickLower && rows.some((r) => r.nickname.trim().toLowerCase() === myNickLower);
   const mergedRows: LeaderRow[] =
-    mode === "today" && myNickname && myScore !== undefined && !hasMyRow
+    myNickname && myScore !== undefined && !hasMyRow
       ? rows.concat([
           {
             rank: myRank ?? Math.max(21, rows.length + 1),
