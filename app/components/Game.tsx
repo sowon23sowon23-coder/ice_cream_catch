@@ -855,7 +855,7 @@ export default function Game({
             </div>
 
             {/* Cup + toppings */}
-            <div className="relative h-72 w-64">
+            <div className="relative h-[32rem] w-[28rem] max-w-full">
               {!finalCupLoadFailed ? (
                 <img
                   src="/final-cup.png?v=20260223"
