@@ -6,11 +6,24 @@ import { trackEvent } from "../lib/gtag";
 type CharId = "green" | "berry" | "sprinkle";
 type GameMode = "free" | "mission" | "timeAttack";
 
-const MISSION_TOPPINGS = ["🍒", "🍓", "🥄", "🫐", "🍫"] as const;
-type MissionTopping = (typeof MISSION_TOPPINGS)[number];
-type FallingEmoji = "🍨" | MissionTopping;
+const FALLING_ITEM_CANDIDATES = [
+  "gummy-bear.png",
+  "green-gummy-bear.png",
+  "yellow-gummy-bear.png",
+  "red-gummy-bear.png",
+  "orange-gummy-bear.png",
+  "strawberry.png",
+  "kiwi.png",
+  "pineapple.png",
+  "mango.png",
+  "cookie.png",
+  "m-and-m-brown.png",
+  "m-and-m-red.png",
+  "m-and-m-orange.png",
+] as const;
+type MissionItemImage = string;
 
-type FallingItem = { id: number; x: number; y: number; v: number; emoji?: FallingEmoji; image?: string };
+type FallingItem = { id: number; x: number; y: number; v: number; emoji?: string; image?: string };
 type Pop = { id: number; x: number; y: number; text: string; born: number };
 type CaughtItem = { id: number; emoji?: string; image?: string; x: number; y: number; rotate: number; scale: number };
 
@@ -28,9 +41,12 @@ const DEFAULT_GAME_BG =
 const FREE_DIFFICULTY_STEP = 20;
 const FREE_SPEED_PER_LEVEL = 0.15;
 
-function randomMissionTargets() {
-  const count = Math.floor(Math.random() * 4) + 2; // 2..5
-  const shuffled = [...MISSION_TOPPINGS].sort(() => Math.random() - 0.5);
+function randomMissionTargetsFrom(images: readonly string[]) {
+  if (images.length === 0) return [];
+  const maxCount = Math.min(5, images.length);
+  const minCount = Math.min(2, maxCount);
+  const count = Math.floor(Math.random() * (maxCount - minCount + 1)) + minCount;
+  const shuffled = [...images].sort(() => Math.random() - 0.5);
   return shuffled.slice(0, count);
 }
 
@@ -61,7 +77,8 @@ export default function Game({
   const [fireworkSeed, setFireworkSeed] = useState(0);
   const [shareNotice, setShareNotice] = useState<string | null>(null);
   const [playerX, setPlayerX] = useState(50);
-  const [missionTargets, setMissionTargets] = useState<MissionTopping[]>([]);
+  const [missionTargets, setMissionTargets] = useState<MissionItemImage[]>([]);
+  const [fallingItemImages, setFallingItemImages] = useState<string[]>(["gummy-bear.png"]);
 
   const [items, setItems] = useState<FallingItem[]>([]);
   const [pops, setPops] = useState<Pop[]>([]);
@@ -161,6 +178,31 @@ export default function Game({
     };
   }, []);
 
+  useEffect(() => {
+    let active = true;
+
+    const canLoad = (src: string) =>
+      new Promise<boolean>((resolve) => {
+        const img = new Image();
+        img.onload = () => resolve(true);
+        img.onerror = () => resolve(false);
+        img.src = src;
+      });
+
+    (async () => {
+      const checks = await Promise.all(FALLING_ITEM_CANDIDATES.map((name) => canLoad(`/${name}`)));
+      const available = FALLING_ITEM_CANDIDATES.filter((_, i) => checks[i]);
+      if (!active) return;
+      if (available.length > 0) {
+        setFallingItemImages([...available]);
+      }
+    })();
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
   const stopAll = () => {
     if (spawnRef.current !== null) {
       clearInterval(spawnRef.current);
@@ -234,7 +276,7 @@ export default function Game({
     trackEvent({ action: "game_start", category: "game", label: mode, value: 0 });
 
     if (mode === "mission") {
-      setMissionTargets(randomMissionTargets());
+      setMissionTargets(randomMissionTargetsFrom(fallingItemImages));
       setCountdown("mission");
       setPhase("idle");
 
@@ -409,14 +451,9 @@ export default function Game({
 
     spawnRef.current = window.setInterval(() => {
       if (pausedRef.current) return;
-      let itemData: { emoji?: FallingEmoji; image?: string };
-      
-      if (mode === "mission") {
-        itemData = { emoji: MISSION_TOPPINGS[Math.floor(Math.random() * MISSION_TOPPINGS.length)] };
-      } else {
-        // Free play: only gummy bear
-        itemData = { image: "gummy-bear.png" };
-      }
+      let itemData: { emoji?: string; image?: string };
+      const randomImage = fallingItemImages[Math.floor(Math.random() * fallingItemImages.length)] ?? "gummy-bear.png";
+      itemData = { image: randomImage };
 
       setItems((v) => [
         ...v,
@@ -439,7 +476,7 @@ export default function Game({
           const speedMultiplier =
             mode === "free" ? 1 + difficultyLevelRef.current * FREE_SPEED_PER_LEVEL : 1;
           const ny = item.y + item.v * speedMultiplier;
-          const isMissionTarget = missionSet.has(item.emoji as MissionTopping);
+          const isMissionTarget = item.image ? missionSet.has(item.image) : false;
 
           if (Math.abs(item.x - px) < 8 && ny > 85) {
             if (mode === "mission") {
@@ -527,7 +564,7 @@ export default function Game({
 
     return () => stopAll();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [phase, mode, missionSet]);
+  }, [phase, mode, missionSet, fallingItemImages]);
 
   return (
     <main className="h-full min-h-full bg-gradient-to-b from-pink-100 to-blue-100 flex items-center justify-center p-4">
@@ -618,7 +655,12 @@ export default function Game({
 
         {mode === "mission" && missionTargets.length > 0 && (
           <div className="mb-3 rounded-2xl bg-amber-50 border border-amber-200 px-4 py-2 text-center text-sm font-bold text-amber-900">
-            Catch only: {missionTargets.join(" ")}
+            <p>Catch only:</p>
+            <div className="mt-2 flex items-center justify-center gap-2">
+              {missionTargets.map((target) => (
+                <img key={target} src={`/${target}`} alt={target} className="h-7 w-7 object-contain" draggable={false} />
+              ))}
+            </div>
           </div>
         )}
 
@@ -703,7 +745,17 @@ export default function Game({
                     <div className="text-xs font-extrabold uppercase tracking-[0.16em] text-amber-700 mb-2">
                       Topping Mission
                     </div>
-                    <div className="text-3xl font-black text-amber-600">{missionTargets.join(" ")}</div>
+                    <div className="flex items-center justify-center gap-2">
+                      {missionTargets.map((target) => (
+                        <img
+                          key={`countdown-${target}`}
+                          src={`/${target}`}
+                          alt={target}
+                          className="h-9 w-9 object-contain"
+                          draggable={false}
+                        />
+                      ))}
+                    </div>
                   </>
                 ) : (
                   <div className="text-4xl font-black text-pink-600">
