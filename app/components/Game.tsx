@@ -143,7 +143,7 @@ export default function Game({
 
   const [score, setScore] = useState(0);
   const [lives, setLives] = useState(3);
-  const [timeLeft, setTimeLeft] = useState(5);
+  const [timeLeft, setTimeLeft] = useState(30);
   const [difficultyLevel, setDifficultyLevel] = useState(0);
   const [difficultyNotice, setDifficultyNotice] = useState<string | null>(null);
   const [shareNotice, setShareNotice] = useState<string | null>(null);
@@ -292,7 +292,7 @@ export default function Game({
 
     setScore(0);
     setLives(3);
-    setTimeLeft(5);
+    setTimeLeft(30);
     setDifficultyLevel(0);
     setDifficultyNotice(null);
     setShareNotice(null);
@@ -734,15 +734,15 @@ export default function Game({
           {mode === "timeAttack" && (
             <div
               className={`flex flex-[2] flex-col items-center rounded-2xl py-2 shadow transition-colors duration-300 ${
-                timeLeft <= 2
+                timeLeft <= 5
                   ? "bg-red-500 ring-2 ring-red-300"
-                  : timeLeft <= 4
+                  : timeLeft <= 10
                     ? "bg-orange-400"
                     : "bg-[#960953]"
               }`}
             >
               <span className="text-[9px] font-black uppercase tracking-widest text-white/60">⏱ TIME</span>
-              <span className={`font-black leading-tight text-white ${timeLeft <= 2 ? "text-4xl" : "text-3xl"}`}>
+              <span className={`font-black leading-tight text-white ${timeLeft <= 5 ? "text-4xl" : "text-3xl"}`}>
                 {timeLeft}s
               </span>
             </div>
@@ -760,7 +760,7 @@ export default function Game({
                     ? "bg-orange-400"
                     : "bg-[#960953]"
               }`}
-              style={{ width: `${(timeLeft / 5) * 100}%` }}
+              style={{ width: `${(timeLeft / 30) * 100}%` }}
             />
           </div>
         )}
