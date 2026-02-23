@@ -24,7 +24,7 @@ const FALLING_ITEM_CANDIDATES = [
 type MissionItemImage = string;
 
 type FallingItem = { id: number; x: number; y: number; v: number; emoji?: string; image?: string };
-type Pop = { id: number; x: number; y: number; text: string; born: number };
+type Pop = { id: number; x: number; y: number; text: string; born: number; kind?: "gain" | "loss" };
 type CaughtItem = { id: number; emoji?: string; image?: string; x: number; y: number; rotate: number; scale: number };
 type CreamZone = { minX: number; maxX: number; minY: number; maxY: number };
 
@@ -45,6 +45,9 @@ const FREE_BASE_FALL_SPEED_RANGE = 1.15;
 const DEFAULT_BASE_FALL_SPEED_MIN = 1.2;
 const DEFAULT_BASE_FALL_SPEED_RANGE = 2.4;
 const MISSION_GOAL_SCORE = 10;
+const CATCH_HALF_WIDTH_PCT = 9.5;
+const CATCH_Y_START_PCT = 84;
+const MISS_Y_PCT = 101;
 const TIME_ATTACK_CREAM_ZONES: CreamZone[] = [
   { minX: 44, maxX: 56, minY: 10, maxY: 20 },
   { minX: 33, maxX: 66, minY: 20, maxY: 30 },
@@ -175,6 +178,7 @@ export default function Game({
   const [tilt, setTilt] = useState(0);
   const [bounce, setBounce] = useState(false);
   const [shake, setShake] = useState(false);
+  const [dangerFlash, setDangerFlash] = useState(false);
   const [gameBg, setGameBg] = useState<string | null>(null);
   const [finalCupLoadFailed, setFinalCupLoadFailed] = useState(false);
 
@@ -326,6 +330,7 @@ export default function Game({
     setTilt(0);
     setBounce(false);
     setShake(false);
+    setDangerFlash(false);
     difficultyLevelRef.current = 0;
     if (noticeTimeoutRef.current !== null) {
       clearTimeout(noticeTimeoutRef.current);
@@ -604,14 +609,17 @@ export default function Game({
         let lifeLoss = 0;
         const popsToAdd: Pop[] = [];
         const next: FallingItem[] = [];
+        let lifeLossReason: { x: number; text: string } | null = null;
 
         for (const item of prev) {
           const speedMultiplier =
             mode === "free" ? freeSpeedMultiplier(scoreRef.current) : 1;
           const ny = item.y + item.v * speedMultiplier;
           const isMissionTarget = item.image ? missionSet.has(item.image) : false;
+          const inCatchRangeX = Math.abs(item.x - px) <= CATCH_HALF_WIDTH_PCT;
+          const inCatchRangeY = ny >= CATCH_Y_START_PCT && ny <= 96;
 
-          if (Math.abs(item.x - px) < 8 && ny > 85) {
+          if (inCatchRangeX && inCatchRangeY) {
             if (mode === "mission") {
               if (isMissionTarget) {
                 gained += 1;
@@ -621,16 +629,11 @@ export default function Game({
                   y: 88,
                   text: "+1",
                   born: now,
+                  kind: "gain",
                 });
               } else {
                 lifeLoss += 1;
-                popsToAdd.push({
-                  id: popIdRef.current++,
-                  x: item.x,
-                  y: 88,
-                  text: "X",
-                  born: now,
-                });
+                if (!lifeLossReason) lifeLossReason = { x: item.x, text: "WRONG" };
               }
             } else {
               gained += 1;
@@ -640,6 +643,7 @@ export default function Game({
                 y: 88,
                 text: "+1",
                 born: now,
+                kind: "gain",
               });
               // Track caught items for Time Attack reveal screen
               if (mode === "timeAttack") {
@@ -658,14 +662,16 @@ export default function Game({
             continue;
           }
 
-          if (ny > 105) {
+          if (ny > MISS_Y_PCT) {
             if (mode === "mission") {
               if (isMissionTarget) {
                 lifeLoss += 1;
+                if (!lifeLossReason) lifeLossReason = { x: item.x, text: "MISSED" };
               }
             } else {
               if (mode !== "timeAttack") {
                 lifeLoss += 1;
+                if (!lifeLossReason) lifeLossReason = { x: item.x, text: "MISSED" };
               }
             }
             continue;
@@ -682,11 +688,20 @@ export default function Game({
             lastLifeLossRef.current = now2;
             setPops((ps) =>
               ps.concat([
-                { id: popIdRef.current++, x: playerXRef.current, y: 90, text: "-1 life", born: now2 },
+                {
+                  id: popIdRef.current++,
+                  x: lifeLossReason?.x ?? playerXRef.current,
+                  y: 88,
+                  text: lifeLossReason?.text ?? "MISS",
+                  born: now2,
+                  kind: "loss",
+                },
               ])
             );
             setShake(true);
             setTimeout(() => setShake(false), 180);
+            setDangerFlash(true);
+            setTimeout(() => setDangerFlash(false), 160);
             setLives((l) => Math.max(0, l - 1));
           }
         }
@@ -896,6 +911,23 @@ export default function Game({
 
           <div className="absolute inset-x-0 bottom-0 h-28 bg-gradient-to-t from-white/30 to-transparent pointer-events-none z-0" />
 
+          {phase === "play" && (
+            <div
+              className="pointer-events-none absolute z-10 rounded-full border border-white/65 bg-white/15"
+              style={{
+                left: `${playerX}%`,
+                top: `${CATCH_Y_START_PCT}%`,
+                width: `${CATCH_HALF_WIDTH_PCT * 2}%`,
+                height: 16,
+                transform: "translate(-50%, -50%)",
+              }}
+            />
+          )}
+
+          {phase === "play" && dangerFlash && (
+            <div className="pointer-events-none absolute inset-0 z-20 bg-red-500/14" />
+          )}
+
           {mode === "timeAttack" && phase === "play" && timeLeft <= 10 && timeLeft > 0 && (
             <div
               className={`pointer-events-none absolute inset-0 z-10 ${
@@ -1024,18 +1056,23 @@ export default function Game({
             const age = (performance.now() - p.born) / 1000;
             const opacity = Math.max(0, 1 - age / 0.7);
             const rise = Math.min(12, age * 20);
+            const isLoss = p.kind === "loss";
 
             return (
               <div
                 key={p.id}
-                className="absolute font-extrabold text-pink-600 pointer-events-none select-none"
+                className={`absolute pointer-events-none select-none font-extrabold ${
+                  isLoss ? "text-red-600" : "text-pink-600"
+                }`}
                 style={{
                   left: `${p.x}%`,
                   top: `${p.y - rise}%`,
                   opacity,
                   transform: `translateX(-50%) rotate(${tilt}deg) scale(${bounce ? 1.08 : 1})`,
                   transition: "transform 120ms ease",
-                  textShadow: "0 2px 10px rgba(0,0,0,0.12)",
+                  textShadow: isLoss
+                    ? "0 2px 10px rgba(185,28,28,0.28)"
+                    : "0 2px 10px rgba(0,0,0,0.12)",
                 }}
               >
                 {p.text}
