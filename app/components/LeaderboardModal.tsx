@@ -1,6 +1,7 @@
 ﻿"use client";
 
 import { useEffect } from "react";
+import StoreCombobox from "./StoreCombobox";
 
 type CharId = "green" | "berry" | "sprinkle";
 
@@ -115,20 +116,14 @@ export default function LeaderboardModal({
             >
               All Stores
             </button>
-            <select
+            <StoreCombobox
+              stores={stores}
               value={selectedStore === "__ALL__" ? "" : selectedStore}
-              onChange={(e) => onStoreChange(e.target.value)}
-              className="min-w-0 flex-1 rounded-lg border border-[#efb8d4] bg-white px-3 py-2 text-sm font-semibold text-[#6f3254] outline-none"
-            >
-              <option value="" disabled>
-                Select a store…
-              </option>
-              {stores.map((store) => (
-                <option key={store} value={store}>
-                  {store}
-                </option>
-              ))}
-            </select>
+              onChange={(store) => onStoreChange(store)}
+              placeholder="Search store…"
+              wrapperClassName="min-w-0 flex-1"
+              inputClassName="w-full rounded-lg border border-[#efb8d4] bg-white px-3 py-2 text-sm font-semibold text-[#6f3254] outline-none"
+            />
           </div>
         </div>
 
