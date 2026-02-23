@@ -226,6 +226,24 @@ function startOfTodayLocalISO() {
   return d.toISOString();
 }
 
+function todayBestStorageKey(nickname: string, store: string) {
+  return `todayBest:${normalizeNick(nickname || "guest")}:${store}:${startOfTodayLocalISO().slice(0, 10)}`;
+}
+
+function readLocalTodayBest(nickname: string, store: string) {
+  const key = todayBestStorageKey(nickname, store);
+  const raw = Number(localStorage.getItem(key) || 0);
+  return raw > 0 ? raw : undefined;
+}
+
+function writeLocalTodayBest(nickname: string, store: string, score: number) {
+  const key = todayBestStorageKey(nickname, store);
+  const prev = Number(localStorage.getItem(key) || 0);
+  const next = Math.max(prev, score);
+  localStorage.setItem(key, String(next));
+  return next;
+}
+
 export default function Page() {
   const [phase, setPhase] = useState<Phase>("login");
   const [character, setCharacter] = useState<CharId>("green");
@@ -462,12 +480,22 @@ export default function Page() {
           setLastScore(mine.score);
           await calcMyRank(mode, mine.score, selectedStore);
         } else {
-          setLastScore(undefined);
+          if (mode === "today") {
+            const localToday = readLocalTodayBest(nick, selectedStore);
+            setLastScore(localToday);
+          } else {
+            setLastScore(undefined);
+          }
           setMyRank(undefined);
         }
       } catch (e) {
         console.error(e);
-        setLastScore(undefined);
+        if (mode === "today") {
+          const localToday = readLocalTodayBest(nick, selectedStore);
+          setLastScore(localToday);
+        } else {
+          setLastScore(undefined);
+        }
         setMyRank(undefined);
       }
     } else {
@@ -578,12 +606,22 @@ export default function Page() {
           setLastScore(mine.score);
           await calcMyRank(m, mine.score, selectedStore);
         } else {
-          setLastScore(undefined);
+          if (m === "today") {
+            const localToday = readLocalTodayBest(nick, selectedStore);
+            setLastScore(localToday);
+          } else {
+            setLastScore(undefined);
+          }
           setMyRank(undefined);
         }
       } catch (e) {
         console.error(e);
-        setLastScore(undefined);
+        if (m === "today") {
+          const localToday = readLocalTodayBest(nick, selectedStore);
+          setLastScore(localToday);
+        } else {
+          setLastScore(undefined);
+        }
         setMyRank(undefined);
       }
     } else {
@@ -608,12 +646,22 @@ export default function Page() {
           setLastScore(mine.score);
           await calcMyRank(mode, mine.score, store);
         } else {
-          setLastScore(undefined);
+          if (mode === "today") {
+            const localToday = readLocalTodayBest(nick, store);
+            setLastScore(localToday);
+          } else {
+            setLastScore(undefined);
+          }
           setMyRank(undefined);
         }
       } catch (e) {
         console.error(e);
-        setLastScore(undefined);
+        if (mode === "today") {
+          const localToday = readLocalTodayBest(nick, store);
+          setLastScore(localToday);
+        } else {
+          setLastScore(undefined);
+        }
         setMyRank(undefined);
       }
     }
@@ -684,12 +732,7 @@ export default function Page() {
                   const normalizedStore =
                     selectedStore && selectedStore !== "__ALL__" ? selectedStore : fallbackStore;
                   const leaderboardMode: LeaderMode = "today";
-                  const todayKey = `todayBest:${normalizeNick(nick || "guest")}:${normalizedStore}:${
-                    startOfTodayLocalISO().slice(0, 10)
-                  }`;
-                  const prevTodayBest = Number(localStorage.getItem(todayKey) || 0);
-                  const todayBestLocal = Math.max(prevTodayBest, finalScore);
-                  localStorage.setItem(todayKey, String(todayBestLocal));
+                  const todayBestLocal = writeLocalTodayBest(nick || "guest", normalizedStore, finalScore);
 
                   setLbOpen(true);
                   setLbLoading(true);
