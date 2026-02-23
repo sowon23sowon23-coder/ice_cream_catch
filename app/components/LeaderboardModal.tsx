@@ -103,18 +103,33 @@ export default function LeaderboardModal({
             </button>
           </div>
 
-          <select
-            value={selectedStore}
-            onChange={(e) => onStoreChange(e.target.value)}
-            className="mt-3 w-full rounded-lg border border-[#efb8d4] bg-white px-3 py-2 text-sm font-semibold text-[#6f3254] outline-none"
-          >
-            <option value="__ALL__">All Stores</option>
-            {stores.map((store) => (
-              <option key={store} value={store}>
-                {store}
+          <div className="mt-3 flex gap-2">
+            <button
+              type="button"
+              onClick={() => onStoreChange("__ALL__")}
+              className={`shrink-0 rounded-lg px-3 py-2 text-sm font-black transition ${
+                selectedStore === "__ALL__"
+                  ? "bg-[#960953] text-white"
+                  : "border border-[#efb8d4] bg-white text-[#6f3254]"
+              }`}
+            >
+              All Stores
+            </button>
+            <select
+              value={selectedStore === "__ALL__" ? "" : selectedStore}
+              onChange={(e) => onStoreChange(e.target.value)}
+              className="min-w-0 flex-1 rounded-lg border border-[#efb8d4] bg-white px-3 py-2 text-sm font-semibold text-[#6f3254] outline-none"
+            >
+              <option value="" disabled>
+                Select a store…
               </option>
-            ))}
-          </select>
+              {stores.map((store) => (
+                <option key={store} value={store}>
+                  {store}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
 
         <div className="px-5 pb-5 pt-4">
