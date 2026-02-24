@@ -1272,7 +1272,7 @@ export default function Game({
             </div>
 
             {/* Buttons */}
-            <div className="flex w-full max-w-sm flex-col gap-2.5 sm:gap-3">
+            <div className="flex w-full max-w-sm flex-col">
               <button
                 type="button"
                 onClick={() => {
@@ -1281,15 +1281,15 @@ export default function Game({
                     onGameOver?.(score);
                   }
                 }}
-                className="w-full rounded-2xl bg-[#960953] py-2.5 text-sm font-black text-white shadow-[0_10px_24px_rgba(150,9,83,0.35)] transition active:scale-95 sm:py-3"
+                className="px-10 py-4 rounded-full bg-[#960953] text-white font-extrabold shadow-lg active:scale-95 transition"
               >
-                🏆 See Leaderboard
+                Leaderboard
               </button>
 
               <button
                 type="button"
                 onClick={start}
-                className="w-full rounded-2xl border-2 border-[#f2bfd9] bg-white py-2.5 text-sm font-black text-[#960953] transition active:scale-95 sm:py-3"
+                className="mt-3 px-10 py-4 rounded-full bg-pink-500 text-white font-extrabold shadow-lg active:scale-95 transition"
               >
                 Retry
               </button>
@@ -1297,19 +1297,19 @@ export default function Game({
               <button
                 type="button"
                 onClick={handleShare}
-                className="w-full rounded-2xl border border-[#f2bfd9] bg-white/70 py-2.5 text-sm font-bold text-[#6f2b50] transition active:scale-95 sm:py-3"
+                className="mt-3 px-8 py-3 rounded-full bg-sky-500 text-white font-extrabold shadow-lg active:scale-95 transition"
               >
-                Share
+                Share With Friends
               </button>
 
               {shareNotice && (
-                <p className="text-xs font-bold text-[#7a4560]">{shareNotice}</p>
+                <div className="mt-2 text-xs font-bold text-slate-700">{shareNotice}</div>
               )}
 
               <button
                 type="button"
                 onClick={onExitToHome}
-                className="text-sm font-bold text-[#a0627a] underline underline-offset-4"
+                className="mt-3 text-sm font-bold text-pink-700/80 underline underline-offset-4"
               >
                 Back to Home
               </button>
