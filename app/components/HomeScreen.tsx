@@ -89,23 +89,14 @@ export default function HomeScreen({
               <h1 className="text-xl font-black text-[#4b0b31]">Ice Cream Catcher</h1>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={onOpenLeaderboard}
-              className="rounded-full border border-[#f2bad5] bg-white px-3 py-2 text-xs font-black text-[#960953] shadow-sm transition hover:-translate-y-0.5"
-            >
-              Leaderboard
-            </button>
-            <button
-              type="button"
-              onClick={onOpenAdmin}
-              aria-label="Open admin page"
-              className="grid h-9 w-9 place-items-center rounded-full border border-[#f2bad5] bg-white text-base shadow-sm transition hover:-translate-y-0.5"
-            >
-              🛠️
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={onOpenAdmin}
+            aria-label="Open admin page"
+            className="grid h-9 w-9 place-items-center rounded-full border border-[#f2bad5] bg-white text-base shadow-sm transition hover:-translate-y-0.5"
+          >
+            🛠️
+          </button>
         </header>
 
         {nickname ? (
@@ -120,7 +111,13 @@ export default function HomeScreen({
               <p className="text-[11px] font-extrabold uppercase tracking-[0.16em] text-[#960953]">Best Score</p>
               <p className="text-2xl font-black text-[#4b0b31]">{bestScore}</p>
             </div>
-            <span className="rounded-full bg-[#8dc63f] px-3 py-1 text-xs font-black text-white">Play Boost</span>
+            <button
+              type="button"
+              onClick={onOpenLeaderboard}
+              className="rounded-full border border-[#f2bad5] bg-white px-3 py-1.5 text-xs font-black text-[#960953] shadow-sm transition hover:-translate-y-0.5"
+            >
+              Leaderboard
+            </button>
           </div>
         </section>
 
