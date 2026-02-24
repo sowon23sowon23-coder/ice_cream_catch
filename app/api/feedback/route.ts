@@ -17,6 +17,11 @@ function getServerSupabase() {
   return createClient(url, key);
 }
 
+function isMissingTableError(message?: string | null) {
+  const m = (message || "").toLowerCase();
+  return m.includes("could not find the table") || m.includes("relation") && m.includes("does not exist");
+}
+
 export async function POST(req: NextRequest) {
   let body: FeedbackBody;
   try {
@@ -35,6 +40,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Server is not configured for feedback." }, { status: 500 });
   }
 
+  const feedbackTable = (process.env.FEEDBACK_TABLE || "user_feedback").trim();
+
   const payload = {
     message,
     nickname: (body.nickname || "").trim() || null,
@@ -43,38 +50,35 @@ export async function POST(req: NextRequest) {
     user_agent: req.headers.get("user-agent") || null,
   };
 
-  const attempts = [
-    () => supabase.from("user_feedback").insert([payload]),
-    () => supabase.from("feedback").insert([payload]),
-    () =>
-      supabase.from("user_feedback").insert([
-        {
-          message: payload.message,
-          nickname: payload.nickname,
-          store: payload.store,
-        },
-      ]),
-    () =>
-      supabase.from("feedback").insert([
-        {
-          message: payload.message,
-          nickname: payload.nickname,
-          store: payload.store,
-        },
-      ]),
-  ];
+  const minimalPayload = {
+    message: payload.message,
+    nickname: payload.nickname,
+    store: payload.store,
+  };
 
-  let lastError: string | null = null;
-  for (const attempt of attempts) {
-    const { error } = await attempt();
-    if (!error) {
-      return NextResponse.json({ ok: true });
-    }
-    lastError = error.message;
+  // First try full payload (for richer schema), then minimal payload.
+  const first = await supabase.from(feedbackTable).insert([payload]);
+  if (!first.error) {
+    return NextResponse.json({ ok: true });
+  }
+
+  const second = await supabase.from(feedbackTable).insert([minimalPayload]);
+  if (!second.error) {
+    return NextResponse.json({ ok: true });
+  }
+
+  const errMsg = second.error?.message || first.error.message || "Failed to save feedback.";
+  if (isMissingTableError(errMsg)) {
+    return NextResponse.json(
+      {
+        error: `Feedback table is missing. Create table '${feedbackTable}' or set FEEDBACK_TABLE.`,
+      },
+      { status: 500 },
+    );
   }
 
   return NextResponse.json(
-    { error: lastError || "Failed to save feedback." },
+    { error: errMsg },
     { status: 500 },
   );
 }
