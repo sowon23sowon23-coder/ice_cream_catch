@@ -22,7 +22,7 @@ export async function GET(req: NextRequest) {
     auth: { persistSession: false, autoRefreshToken: false },
   });
 
-  const buildQuery = (selectColumns: string, supportsStoreFilter: boolean, withScoreOrder: boolean) => {
+  const buildQuery = (selectColumns: string, withScoreOrder: boolean) => {
     let query = adminSupabase
       .from("leaderboard_best_v2")
       .select(selectColumns)
@@ -32,21 +32,17 @@ export async function GET(req: NextRequest) {
       query = query.order("score", { ascending: false }).order("updated_at", { ascending: true });
     }
 
-    if (supportsStoreFilter && store && store !== "__ALL__") {
-      query = query.eq("store", store);
-    }
-
     return query;
   };
 
   const attempts = [
-    { run: () => buildQuery("nickname_key,nickname_display,score,updated_at,character,store", true, true), hasStore: true },
-    { run: () => buildQuery("nickname_key,nickname_display,score,updated_at,store", true, true), hasStore: true },
-    { run: () => buildQuery("nickname_key,nickname_display,score,updated_at,character", false, true), hasStore: false },
-    { run: () => buildQuery("nickname_key,nickname_display,score,updated_at", false, true), hasStore: false },
-    { run: () => buildQuery("nickname_key,nickname_display,score,store,character", true, false), hasStore: true },
-    { run: () => buildQuery("nickname_key,nickname_display,score", false, false), hasStore: false },
-    { run: () => buildQuery("*", false, false), hasStore: false },
+    { run: () => buildQuery("nickname_key,nickname_display,score,updated_at,character,store", true), hasStore: true },
+    { run: () => buildQuery("nickname_key,nickname_display,score,updated_at,store", true), hasStore: true },
+    { run: () => buildQuery("nickname_key,nickname_display,score,updated_at,character", true), hasStore: false },
+    { run: () => buildQuery("nickname_key,nickname_display,score,updated_at", true), hasStore: false },
+    { run: () => buildQuery("nickname_key,nickname_display,score,store,character", false), hasStore: true },
+    { run: () => buildQuery("nickname_key,nickname_display,score", false), hasStore: false },
+    { run: () => buildQuery("*", false), hasStore: false },
   ];
 
   let data: any[] | null = null;
@@ -68,5 +64,12 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Failed to load leaderboard records.", details: error.message }, { status: 500 });
   }
 
-  return NextResponse.json({ rows: data ?? [], supportsStore });
+  const rows = (data ?? []) as Array<{ store?: string | null }>;
+  if (supportsStore && store && store !== "__ALL__") {
+    const wanted = store.trim().toLowerCase();
+    const filtered = rows.filter((r) => ((r.store ?? "").trim().toLowerCase() === wanted));
+    return NextResponse.json({ rows: filtered, supportsStore });
+  }
+
+  return NextResponse.json({ rows, supportsStore });
 }
