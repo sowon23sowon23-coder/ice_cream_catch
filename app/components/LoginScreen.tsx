@@ -145,7 +145,7 @@ export default function LoginScreen({
               <span className="ml-2 text-[10px] font-semibold normal-case text-[#a07090]">Checking...</span>
             )}
             {lockedStore && (
-              <span className="ml-2 text-[10px] font-semibold normal-case text-[#c13f63]">?뵏 Locked</span>
+              <span className="ml-2 text-[10px] font-semibold normal-case text-[#c13f63]">Locked</span>
             )}
           </label>
           <StoreCombobox
