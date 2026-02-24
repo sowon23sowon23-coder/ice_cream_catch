@@ -257,9 +257,6 @@ export default function AdminPage() {
           <div className="rounded-3xl border border-[#f4c5dd] bg-white/90 p-6 shadow-[0_16px_36px_rgba(150,9,83,0.15)]">
             <p className="text-[11px] font-black uppercase tracking-[0.2em] text-[#960953]">Admin</p>
             <h1 className="mt-1 text-2xl font-black text-[#4b0b31]">Enter Password</h1>
-            <p className="mt-2 text-sm font-semibold text-[#7f4a66]">
-              관리자 비밀번호를 입력하면 점수 삭제 기능을 사용할 수 있습니다.
-            </p>
 
             <form onSubmit={onSubmitPassword} className="mt-4 space-y-3">
               <input
@@ -275,7 +272,7 @@ export default function AdminPage() {
                   checked={showPassword}
                   onChange={(e) => setShowPassword(e.target.checked)}
                 />
-                비밀번호 보기
+                Show password
               </label>
               {authError ? <p className="text-sm font-bold text-[#b42357]">{authError}</p> : null}
               <div className="flex items-center gap-2">
@@ -344,7 +341,6 @@ export default function AdminPage() {
         <div className="mb-4 overflow-hidden rounded-2xl border border-[#f3c7dd] bg-white shadow-[0_12px_24px_rgba(150,9,83,0.12)]">
           <div className="bg-[linear-gradient(135deg,#fff1f8,#f8c8df)] px-4 py-3">
             <p className="text-[11px] font-black uppercase tracking-[0.2em] text-[#960953]">Store Summary</p>
-            <p className="text-sm font-semibold text-[#7f4a66]">매장별 데이터 집계</p>
           </div>
           <div className="grid grid-cols-[1.8fr_80px_100px_100px_90px] bg-[#fff2f8] px-4 py-2 text-xs font-black text-[#8a5a75]">
             <div>STORE</div>
