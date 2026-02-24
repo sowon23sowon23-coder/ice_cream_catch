@@ -617,11 +617,41 @@ export default function Page() {
     }
 
     if (error) {
-      console.error(error);
-      if (!silent) {
-        alert("Failed to save score.");
+      const insertAttempts = [
+        () =>
+          supabase.from("leaderboard_best_v2").insert([
+            { nickname_key, nickname_display: nicknameDisplay.trim(), score, character: selectedCharacter, store },
+          ]),
+        () =>
+          supabase.from("leaderboard_best_v2").insert([
+            { nickname_key, nickname_display: nicknameDisplay.trim(), score, store },
+          ]),
+        () =>
+          supabase.from("leaderboard_best_v2").insert([
+            { nickname_key, nickname_display: nicknameDisplay.trim(), score, character: selectedCharacter },
+          ]),
+        () =>
+          supabase.from("leaderboard_best_v2").insert([
+            { nickname_key, nickname_display: nicknameDisplay.trim(), score },
+          ]),
+      ];
+
+      for (const insertAttempt of insertAttempts) {
+        const insertRes = await insertAttempt();
+        if (!insertRes.error) {
+          error = null;
+          break;
+        }
+        error = insertRes.error;
       }
-      return undefined;
+
+      if (error) {
+        console.error(error);
+        if (!silent) {
+          alert("Failed to save score.");
+        }
+        return undefined;
+      }
     }
 
     return score;
