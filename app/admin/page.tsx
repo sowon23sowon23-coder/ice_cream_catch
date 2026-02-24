@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import type { FormEvent } from "react";
 import { STORE_OPTIONS } from "../lib/stores";
+import StoreCombobox from "../components/StoreCombobox";
 
 type CharId = "green" | "berry" | "sprinkle";
 
@@ -314,19 +315,30 @@ export default function AdminPage() {
             placeholder="Search nickname / key / store"
             className="w-full rounded-xl border border-[#edb8d3] bg-white px-3 py-2 text-sm font-semibold text-[#5b2041] outline-none"
           />
-          <select
-            value={storeFilter}
-            onChange={(e) => setStoreFilter(e.target.value)}
-            disabled={!supportsStore}
-            className="rounded-xl border border-[#edb8d3] bg-white px-3 py-2 text-sm font-semibold text-[#5b2041] outline-none sm:w-[220px]"
-          >
-            <option value="__ALL__">All Stores</option>
-            {STORE_OPTIONS.map((store) => (
-              <option key={store} value={store}>
-                {store}
-              </option>
-            ))}
-          </select>
+          <div className="flex shrink-0 items-center gap-2 sm:w-[280px]">
+            <button
+              type="button"
+              disabled={!supportsStore}
+              onClick={() => setStoreFilter("__ALL__")}
+              className={`shrink-0 rounded-lg px-3 py-2 text-sm font-black transition disabled:opacity-40 ${
+                storeFilter === "__ALL__"
+                  ? "bg-[#960953] text-white"
+                  : "border border-[#edb8d3] bg-white text-[#5b2041]"
+              }`}
+            >
+              All
+            </button>
+            <StoreCombobox
+              stores={STORE_OPTIONS}
+              value={storeFilter === "__ALL__" ? "" : storeFilter}
+              onChange={(store) => {
+                if (supportsStore) setStoreFilter(store || "__ALL__");
+              }}
+              placeholder="Search store…"
+              wrapperClassName="min-w-0 flex-1"
+              inputClassName="w-full rounded-xl border border-[#edb8d3] bg-white px-3 py-2 text-sm font-semibold text-[#5b2041] outline-none"
+            />
+          </div>
         </div>
         {!supportsStore && (
           <p className="mb-4 text-sm font-semibold text-[#8d6280]">
