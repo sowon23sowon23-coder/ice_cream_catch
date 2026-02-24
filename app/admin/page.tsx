@@ -48,13 +48,20 @@ export default function AdminPage() {
     return { ok: res.ok, error: json.error };
   };
 
-  const loadRows = async () => {
+  const loadRows = async (storeOverride?: string) => {
     const token = adminToken.trim();
     if (!token) return;
+    const effectiveStore = storeOverride ?? storeFilter;
 
     setLoading(true);
     try {
-      const res = await fetch("/api/admin/list", {
+      const params = new URLSearchParams();
+      if (effectiveStore && effectiveStore !== "__ALL__") {
+        params.set("store", effectiveStore);
+      }
+      const query = params.toString();
+
+      const res = await fetch(`/api/admin/list${query ? `?${query}` : ""}`, {
         method: "GET",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -117,8 +124,8 @@ export default function AdminPage() {
 
   useEffect(() => {
     if (!isAuthed || !adminToken.trim()) return;
-    void loadRows();
-  }, [isAuthed, adminToken, storeFilter]);
+    void loadRows(storeFilter);
+  }, [isAuthed, adminToken]);
 
   const filteredRows = useMemo(() => {
     const term = search.trim().toLowerCase();
@@ -298,7 +305,7 @@ export default function AdminPage() {
           <div className="flex items-center gap-2">
             <button
               type="button"
-              onClick={() => void loadRows()}
+              onClick={() => void loadRows(storeFilter)}
               className="rounded-full border border-[#f2bad5] bg-white px-4 py-2 text-sm font-black text-[#960953]"
             >
               Refresh
@@ -356,7 +363,12 @@ export default function AdminPage() {
                     <button
                       type="button"
                       disabled={!supportsStore || s.store === "__UNKNOWN__"}
-                      onClick={() => setStoreFilter(s.store)}
+                      onClick={() => {
+                        if (!supportsStore || s.store === "__UNKNOWN__") return;
+                        setSearch("");
+                        setStoreFilter(s.store);
+                        void loadRows(s.store);
+                      }}
                       className="rounded-lg border border-[#edb8d3] bg-white px-2 py-1 text-xs font-black text-[#960953] disabled:opacity-40"
                     >
                       Open
@@ -379,7 +391,12 @@ export default function AdminPage() {
             <button
               type="button"
               disabled={!supportsStore}
-              onClick={() => setStoreFilter("__ALL__")}
+              onClick={() => {
+                if (!supportsStore) return;
+                setSearch("");
+                setStoreFilter("__ALL__");
+                void loadRows("__ALL__");
+              }}
               className={`shrink-0 rounded-lg px-3 py-2 text-sm font-black transition disabled:opacity-40 ${
                 storeFilter === "__ALL__"
                   ? "bg-[#960953] text-white"
@@ -392,7 +409,11 @@ export default function AdminPage() {
               stores={STORE_OPTIONS}
               value={storeFilter === "__ALL__" ? "" : storeFilter}
               onChange={(store) => {
-                if (supportsStore) setStoreFilter(store || "__ALL__");
+                if (!supportsStore) return;
+                const nextStore = store || "__ALL__";
+                setSearch("");
+                setStoreFilter(nextStore);
+                void loadRows(nextStore);
               }}
               placeholder="Search store…"
               wrapperClassName="min-w-0 flex-1"
