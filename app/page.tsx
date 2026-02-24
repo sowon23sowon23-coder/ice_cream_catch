@@ -776,6 +776,10 @@ export default function Page() {
                   setStartSignal((n) => n + 1);
                 }}
                 onOpenLeaderboard={openLeaderboard}
+                onOpenAdmin={() => {
+                  trackEvent({ action: "admin_open_click", category: "engagement" });
+                  window.location.href = "/admin";
+                }}
               />
             )}
 

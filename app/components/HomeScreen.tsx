@@ -36,11 +36,13 @@ export default function HomeScreen({
   bestScore,
   onStart,
   onOpenLeaderboard,
+  onOpenAdmin,
 }: {
   nickname?: string;
   bestScore: number;
   onStart: (character: CharId, mode: GameMode) => void;
   onOpenLeaderboard: () => void;
+  onOpenAdmin: () => void;
 }) {
   const [character, setCharacter] = useState<CharId>("green");
   const [mode, setMode] = useState<GameMode>("free");
@@ -87,13 +89,23 @@ export default function HomeScreen({
               <h1 className="text-xl font-black text-[#4b0b31]">Ice Cream Catcher</h1>
             </div>
           </div>
-          <button
-            type="button"
-            onClick={onOpenLeaderboard}
-            className="rounded-full border border-[#f2bad5] bg-white px-3 py-2 text-xs font-black text-[#960953] shadow-sm transition hover:-translate-y-0.5"
-          >
-            Leaderboard
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={onOpenLeaderboard}
+              className="rounded-full border border-[#f2bad5] bg-white px-3 py-2 text-xs font-black text-[#960953] shadow-sm transition hover:-translate-y-0.5"
+            >
+              Leaderboard
+            </button>
+            <button
+              type="button"
+              onClick={onOpenAdmin}
+              aria-label="Open admin page"
+              className="grid h-9 w-9 place-items-center rounded-full border border-[#f2bad5] bg-white text-base shadow-sm transition hover:-translate-y-0.5"
+            >
+              🛠️
+            </button>
+          </div>
         </header>
 
         {nickname ? (
