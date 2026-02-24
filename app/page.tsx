@@ -852,7 +852,7 @@ export default function Page() {
                   writeLocalAllTimeBest(nick || "guest", normalizedStore, finalScore);
 
                   if (nick.length >= 2 && nick.length <= 12) {
-                    await upsertBestScore(nick, finalScore, character, normalizedStore, false, true);
+                    await upsertBestScore(nick, finalScore, character, normalizedStore, false, false);
 
                     const mine = await fetchMyTodayScore(nick, normalizedStore);
 
