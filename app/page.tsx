@@ -289,6 +289,7 @@ export default function Page() {
   const [lastScore, setLastScore] = useState<number | undefined>(undefined);
   const [lastNick, setLastNick] = useState<string | undefined>(undefined);
   const [myRank, setMyRank] = useState<number | undefined>(undefined);
+  const [loginLoading, setLoginLoading] = useState(false);
 
   useEffect(() => {
     const savedNick = (localStorage.getItem("nickname") || "").trim();
@@ -761,11 +762,33 @@ export default function Page() {
     }
   };
 
-  const onLogin = (nickname: string) => {
+  const onLogin = async (nickname: string) => {
     const trimmed = nickname.trim();
+    setLoginLoading(true);
+
+    try {
+      const key = normalizeNick(trimmed);
+      const { data } = await supabase
+        .from("leaderboard_best_v2")
+        .select("store")
+        .eq("nickname_key", key)
+        .not("store", "is", null)
+        .order("updated_at", { ascending: false })
+        .limit(1);
+
+      const dbStore = (data?.[0] as { store?: string } | undefined)?.store?.trim();
+      if (dbStore && dbStore !== "__ALL__" && STORE_OPTIONS.includes(dbStore)) {
+        setSelectedStore(dbStore);
+        localStorage.setItem("selectedStore", dbStore);
+      }
+    } catch {
+      // fail silently — use the store selected on the login form
+    }
+
     localStorage.setItem("nickname", trimmed);
     setAuthNick(trimmed);
     setLastNick(trimmed);
+    setLoginLoading(false);
     setPhase("home");
   };
 
@@ -792,6 +815,7 @@ export default function Page() {
                 selectedStore={selectedStore}
                 onStoreChange={setSelectedStore}
                 onLogin={onLogin}
+                loading={loginLoading}
               />
             )}
 

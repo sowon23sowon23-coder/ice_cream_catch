@@ -9,12 +9,14 @@ export default function LoginScreen({
   selectedStore,
   onStoreChange,
   onLogin,
+  loading = false,
 }: {
   initialNickname?: string;
   stores: string[];
   selectedStore: string;
   onStoreChange: (store: string) => void;
   onLogin: (nickname: string) => void;
+  loading?: boolean;
 }) {
   const [nickname, setNickname] = useState(initialNickname);
   const [nicknameError, setNicknameError] = useState<string | null>(null);
@@ -82,9 +84,10 @@ export default function LoginScreen({
           <button
             type="button"
             onClick={submit}
-            className="mt-4 w-full rounded-xl bg-[linear-gradient(135deg,#960953,#c54b86)] px-4 py-3 text-sm font-black uppercase tracking-[0.12em] text-white shadow-[0_14px_24px_rgba(150,9,83,0.35)] transition hover:-translate-y-0.5"
+            disabled={loading}
+            className="mt-4 w-full rounded-xl bg-[linear-gradient(135deg,#960953,#c54b86)] px-4 py-3 text-sm font-black uppercase tracking-[0.12em] text-white shadow-[0_14px_24px_rgba(150,9,83,0.35)] transition hover:-translate-y-0.5 disabled:opacity-60"
           >
-            Login
+            {loading ? "Checking..." : "Login"}
           </button>
         </section>
       </div>
