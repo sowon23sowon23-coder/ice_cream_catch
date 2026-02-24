@@ -307,6 +307,10 @@ export default function Game({
       return;
     }
 
+    if (mode === "free") {
+      return;
+    }
+
     onGameOver?.(score);
   };
 
@@ -1071,10 +1075,25 @@ export default function Game({
                     Your Score: <span className="font-black text-pink-600">{score}</span>
                   </div>
 
+                  {mode === "free" && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (!leaderboardOpenedRef.current) {
+                          leaderboardOpenedRef.current = true;
+                          onGameOver?.(score);
+                        }
+                      }}
+                      className="px-10 py-4 rounded-full bg-[#960953] text-white font-extrabold shadow-lg active:scale-95 transition"
+                    >
+                      Leaderboard
+                    </button>
+                  )}
+
                   <button
                     type="button"
                     onClick={start}
-                    className="px-10 py-4 rounded-full bg-pink-500 text-white font-extrabold shadow-lg active:scale-95 transition"
+                    className="mt-3 px-10 py-4 rounded-full bg-pink-500 text-white font-extrabold shadow-lg active:scale-95 transition"
                   >
                     Retry
                   </button>
