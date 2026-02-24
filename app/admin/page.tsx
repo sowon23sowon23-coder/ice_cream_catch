@@ -30,6 +30,7 @@ export default function AdminPage() {
   const [authLoading, setAuthLoading] = useState(true);
   const [isAuthed, setIsAuthed] = useState(false);
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [authError, setAuthError] = useState("");
   const [deletingKey, setDeletingKey] = useState<string | null>(null);
   const [search, setSearch] = useState("");
@@ -203,12 +204,20 @@ export default function AdminPage() {
 
             <form onSubmit={onSubmitPassword} className="mt-4 space-y-3">
               <input
-                type="password"
+                type={showPassword ? "text" : "password"}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="Admin password"
                 className="w-full rounded-xl border border-[#edb8d3] bg-white px-3 py-2 text-sm font-semibold text-[#5b2041] outline-none"
               />
+              <label className="flex items-center gap-2 text-sm font-semibold text-[#6b3551]">
+                <input
+                  type="checkbox"
+                  checked={showPassword}
+                  onChange={(e) => setShowPassword(e.target.checked)}
+                />
+                비밀번호 보기
+              </label>
               {authError ? <p className="text-sm font-bold text-[#b42357]">{authError}</p> : null}
               <div className="flex items-center gap-2">
                 <button
