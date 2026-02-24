@@ -262,6 +262,15 @@ function writeLocalAllTimeBest(nickname: string, store: string, score: number) {
   return next;
 }
 
+function readSyncedLocalAllTimeBest(nickname: string, store: string) {
+  const allTime = readLocalAllTimeBest(nickname, store) ?? 0;
+  const today = readLocalTodayBest(nickname, store) ?? 0;
+  if (today > allTime) {
+    return writeLocalAllTimeBest(nickname, store, today);
+  }
+  return allTime > 0 ? allTime : undefined;
+}
+
 export default function Page() {
   const [phase, setPhase] = useState<Phase>("login");
   const [character, setCharacter] = useState<CharId>("green");
@@ -486,6 +495,7 @@ export default function Page() {
     const nick = (localStorage.getItem("nickname") || "").trim();
     setLastNick(nick || undefined);
 
+    await syncAllTimeFromLocalIfNeeded(mode, selectedStore, nick);
     await fetchTop20(mode, selectedStore);
 
     if (nick.length >= 2 && nick.length <= 12) {
@@ -496,13 +506,13 @@ export default function Page() {
             : await fetchMyBestScore(nick, selectedStore);
         if (mine) {
           const localFallback =
-            mode === "today" ? readLocalTodayBest(nick, selectedStore) : readLocalAllTimeBest(nick, selectedStore);
+            mode === "today" ? readLocalTodayBest(nick, selectedStore) : readSyncedLocalAllTimeBest(nick, selectedStore);
           const bestScore = Math.max(mine.score, localFallback ?? 0);
           setLastScore(bestScore);
           await calcMyRank(mode, bestScore, selectedStore);
         } else {
           const localFallback =
-            mode === "today" ? readLocalTodayBest(nick, selectedStore) : readLocalAllTimeBest(nick, selectedStore);
+            mode === "today" ? readLocalTodayBest(nick, selectedStore) : readSyncedLocalAllTimeBest(nick, selectedStore);
           setLastScore(localFallback);
           if (localFallback !== undefined) {
             await calcMyRank(mode, localFallback, selectedStore);
@@ -513,7 +523,7 @@ export default function Page() {
       } catch (e) {
         console.error(e);
         const localFallback =
-          mode === "today" ? readLocalTodayBest(nick, selectedStore) : readLocalAllTimeBest(nick, selectedStore);
+          mode === "today" ? readLocalTodayBest(nick, selectedStore) : readSyncedLocalAllTimeBest(nick, selectedStore);
         setLastScore(localFallback);
         if (localFallback !== undefined) {
           await calcMyRank(mode, localFallback, selectedStore);
@@ -533,7 +543,8 @@ export default function Page() {
     nicknameDisplay: string,
     score: number,
     selectedCharacter: CharId,
-    store: string
+    store: string,
+    silent = false
   ) => {
     const nickname_key = normalizeNick(nicknameDisplay);
     let existingBestAllTime = 0;
@@ -606,31 +617,52 @@ export default function Page() {
 
     if (error) {
       console.error(error);
-      alert("Failed to save score.");
+      if (!silent) {
+        alert("Failed to save score.");
+      }
       return undefined;
     }
 
     return score;
   };
 
+  const syncAllTimeFromLocalIfNeeded = async (m: LeaderMode, store: string, nick: string) => {
+    if (m !== "all") return;
+    if (!store.trim() || store === "__ALL__") return;
+    if (nick.length < 2 || nick.length > 12) return;
+
+    const localAllTime = readSyncedLocalAllTimeBest(nick, store);
+    if (localAllTime === undefined) return;
+
+    try {
+      const remote = await fetchMyBestScore(nick, store);
+      const remoteBest = remote?.score ?? 0;
+      if (localAllTime > remoteBest) {
+        await upsertBestScore(nick, localAllTime, character, store, true);
+      }
+    } catch (e) {
+      console.error("All-time sync error:", e);
+    }
+  };
+
   const onChangeMode = async (m: LeaderMode) => {
     setMode(m);
-    await fetchTop20(m, selectedStore);
-
     const nick = (localStorage.getItem("nickname") || "").trim();
+    await syncAllTimeFromLocalIfNeeded(m, selectedStore, nick);
+    await fetchTop20(m, selectedStore);
     if (nick.length >= 2 && nick.length <= 12) {
       try {
         const mine =
           m === "today" ? await fetchMyTodayScore(nick, selectedStore) : await fetchMyBestScore(nick, selectedStore);
         if (mine) {
           const localFallback =
-            m === "today" ? readLocalTodayBest(nick, selectedStore) : readLocalAllTimeBest(nick, selectedStore);
+            m === "today" ? readLocalTodayBest(nick, selectedStore) : readSyncedLocalAllTimeBest(nick, selectedStore);
           const bestScore = Math.max(mine.score, localFallback ?? 0);
           setLastScore(bestScore);
           await calcMyRank(m, bestScore, selectedStore);
         } else {
           const localFallback =
-            m === "today" ? readLocalTodayBest(nick, selectedStore) : readLocalAllTimeBest(nick, selectedStore);
+            m === "today" ? readLocalTodayBest(nick, selectedStore) : readSyncedLocalAllTimeBest(nick, selectedStore);
           setLastScore(localFallback);
           if (localFallback !== undefined) {
             await calcMyRank(m, localFallback, selectedStore);
@@ -641,7 +673,7 @@ export default function Page() {
       } catch (e) {
         console.error(e);
         const localFallback =
-          m === "today" ? readLocalTodayBest(nick, selectedStore) : readLocalAllTimeBest(nick, selectedStore);
+          m === "today" ? readLocalTodayBest(nick, selectedStore) : readSyncedLocalAllTimeBest(nick, selectedStore);
         setLastScore(localFallback);
         if (localFallback !== undefined) {
           await calcMyRank(m, localFallback, selectedStore);
@@ -661,6 +693,7 @@ export default function Page() {
     if (!lbOpen) return;
 
     const nick = (localStorage.getItem("nickname") || "").trim();
+    await syncAllTimeFromLocalIfNeeded(mode, store, nick);
     await fetchTop20(mode, store);
 
     if (nick.length >= 2 && nick.length <= 12) {
@@ -668,13 +701,14 @@ export default function Page() {
         const mine =
           mode === "today" ? await fetchMyTodayScore(nick, store) : await fetchMyBestScore(nick, store);
         if (mine) {
-          const localFallback = mode === "today" ? readLocalTodayBest(nick, store) : readLocalAllTimeBest(nick, store);
+          const localFallback =
+            mode === "today" ? readLocalTodayBest(nick, store) : readSyncedLocalAllTimeBest(nick, store);
           const bestScore = Math.max(mine.score, localFallback ?? 0);
           setLastScore(bestScore);
           await calcMyRank(mode, bestScore, store);
         } else {
           const localFallback =
-            mode === "today" ? readLocalTodayBest(nick, store) : readLocalAllTimeBest(nick, store);
+            mode === "today" ? readLocalTodayBest(nick, store) : readSyncedLocalAllTimeBest(nick, store);
           setLastScore(localFallback);
           if (localFallback !== undefined) {
             await calcMyRank(mode, localFallback, store);
@@ -685,7 +719,7 @@ export default function Page() {
       } catch (e) {
         console.error(e);
         const localFallback =
-          mode === "today" ? readLocalTodayBest(nick, store) : readLocalAllTimeBest(nick, store);
+          mode === "today" ? readLocalTodayBest(nick, store) : readSyncedLocalAllTimeBest(nick, store);
         setLastScore(localFallback);
         if (localFallback !== undefined) {
           await calcMyRank(mode, localFallback, store);
@@ -761,8 +795,10 @@ export default function Page() {
                   const normalizedStore =
                     selectedStore && selectedStore !== "__ALL__" ? selectedStore : fallbackStore;
                   const leaderboardMode: LeaderMode = "today";
-                  const todayBestLocal = writeLocalTodayBest(nick || "guest", normalizedStore, finalScore);
-                  writeLocalAllTimeBest(nick || "guest", normalizedStore, finalScore);
+                  const isFreePlay = gameMode === "free";
+                  const todayBestLocal = isFreePlay
+                    ? writeLocalTodayBest(nick || "guest", normalizedStore, finalScore)
+                    : readLocalTodayBest(nick || "guest", normalizedStore);
 
                   setLbOpen(true);
                   setLbLoading(true);
@@ -771,6 +807,14 @@ export default function Page() {
                   localStorage.setItem("selectedStore", normalizedStore);
                   setLastNick(nick || "YOU");
                   setLastScore(todayBestLocal);
+
+                  if (!isFreePlay) {
+                    setMyRank(undefined);
+                    await fetchTop20(leaderboardMode, normalizedStore);
+                    return;
+                  }
+
+                  writeLocalAllTimeBest(nick || "guest", normalizedStore, finalScore);
 
                   if (nick.length >= 2 && nick.length <= 12) {
                     await upsertBestScore(nick, finalScore, character, normalizedStore);
