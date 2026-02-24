@@ -544,7 +544,8 @@ export default function Page() {
     score: number,
     selectedCharacter: CharId,
     store: string,
-    silent = false
+    silent = false,
+    forceWrite = false
   ) => {
     const nickname_key = normalizeNick(nicknameDisplay);
     let existingBestAllTime = 0;
@@ -571,7 +572,7 @@ export default function Page() {
     }
 
     // Keep all-time records immutable unless a higher score is achieved.
-    if (score <= existingBestAllTime) {
+    if (!forceWrite && score <= existingBestAllTime) {
       return existingBestAllTime;
     }
 
@@ -821,7 +822,7 @@ export default function Page() {
                   writeLocalAllTimeBest(nick || "guest", normalizedStore, finalScore);
 
                   if (nick.length >= 2 && nick.length <= 12) {
-                    await upsertBestScore(nick, finalScore, character, normalizedStore);
+                    await upsertBestScore(nick, finalScore, character, normalizedStore, false, true);
 
                     const mine = await fetchMyTodayScore(nick, normalizedStore);
 
