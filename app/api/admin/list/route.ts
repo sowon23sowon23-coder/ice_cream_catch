@@ -22,14 +22,14 @@ export async function GET(req: NextRequest) {
     auth: { persistSession: false, autoRefreshToken: false },
   });
 
-  const buildQuery = (selectColumns: string) => {
+  const buildQuery = (selectColumns: string, supportsStoreFilter: boolean) => {
     let query = adminSupabase
       .from("leaderboard_best_v2")
       .select(selectColumns)
       .order("updated_at", { ascending: false })
       .limit(5000);
 
-    if (store && store !== "__ALL__") {
+    if (supportsStoreFilter && store && store !== "__ALL__") {
       query = query.eq("store", store);
     }
 
@@ -37,10 +37,10 @@ export async function GET(req: NextRequest) {
   };
 
   const attempts = [
-    () => buildQuery("nickname_key,nickname_display,score,updated_at,character,store"),
-    () => buildQuery("nickname_key,nickname_display,score,updated_at,store"),
-    () => buildQuery("nickname_key,nickname_display,score,updated_at,character"),
-    () => buildQuery("nickname_key,nickname_display,score,updated_at"),
+    () => buildQuery("nickname_key,nickname_display,score,updated_at,character,store", true),
+    () => buildQuery("nickname_key,nickname_display,score,updated_at,store", true),
+    () => buildQuery("nickname_key,nickname_display,score,updated_at,character", false),
+    () => buildQuery("nickname_key,nickname_display,score,updated_at", false),
   ];
 
   let data: any[] | null = null;
