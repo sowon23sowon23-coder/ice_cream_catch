@@ -52,7 +52,13 @@ export default function AdminPage() {
 
     setLoading(true);
     try {
-      const res = await fetch("/api/admin/list", {
+      const params = new URLSearchParams();
+      if (storeFilter && storeFilter !== "__ALL__") {
+        params.set("store", storeFilter);
+      }
+      const query = params.toString();
+
+      const res = await fetch(`/api/admin/list${query ? `?${query}` : ""}`, {
         method: "GET",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -112,7 +118,7 @@ export default function AdminPage() {
   useEffect(() => {
     if (!isAuthed || !adminToken.trim()) return;
     void loadRows();
-  }, [isAuthed, adminToken]);
+  }, [isAuthed, adminToken, storeFilter]);
 
   const filteredRows = useMemo(() => {
     const term = search.trim().toLowerCase();

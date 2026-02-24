@@ -16,35 +16,31 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   }
 
+  const store = (req.nextUrl.searchParams.get("store") || "").trim();
+
   const adminSupabase = createClient(supabaseUrl, serviceRoleKey, {
     auth: { persistSession: false, autoRefreshToken: false },
   });
 
+  const buildQuery = (selectColumns: string) => {
+    let query = adminSupabase
+      .from("leaderboard_best_v2")
+      .select(selectColumns)
+      .order("updated_at", { ascending: false })
+      .limit(5000);
+
+    if (store && store !== "__ALL__") {
+      query = query.eq("store", store);
+    }
+
+    return query;
+  };
+
   const attempts = [
-    () =>
-      adminSupabase
-        .from("leaderboard_best_v2")
-        .select("nickname_key,nickname_display,score,updated_at,character,store")
-        .order("updated_at", { ascending: false })
-        .limit(500),
-    () =>
-      adminSupabase
-        .from("leaderboard_best_v2")
-        .select("nickname_key,nickname_display,score,updated_at,store")
-        .order("updated_at", { ascending: false })
-        .limit(500),
-    () =>
-      adminSupabase
-        .from("leaderboard_best_v2")
-        .select("nickname_key,nickname_display,score,updated_at,character")
-        .order("updated_at", { ascending: false })
-        .limit(500),
-    () =>
-      adminSupabase
-        .from("leaderboard_best_v2")
-        .select("nickname_key,nickname_display,score,updated_at")
-        .order("updated_at", { ascending: false })
-        .limit(500),
+    () => buildQuery("nickname_key,nickname_display,score,updated_at,character,store"),
+    () => buildQuery("nickname_key,nickname_display,score,updated_at,store"),
+    () => buildQuery("nickname_key,nickname_display,score,updated_at,character"),
+    () => buildQuery("nickname_key,nickname_display,score,updated_at"),
   ];
 
   let data: any[] | null = null;
