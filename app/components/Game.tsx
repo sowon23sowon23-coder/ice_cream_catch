@@ -295,7 +295,8 @@ export default function Game({
     trackEvent({ action: "game_over", category: "game", label: mode, value: score });
 
     const best = Number(localStorage.getItem("bestScore") || 0);
-    if (score > best) {
+    const isNewBest = score > best;
+    if (isNewBest) {
       localStorage.setItem("bestScore", String(score));
       onBestScore(score);
       trackEvent({ action: "new_best_score", category: "game", label: mode, value: score });
@@ -308,6 +309,15 @@ export default function Game({
     }
 
     if (mode === "free") {
+      if (isNewBest && !leaderboardOpenedRef.current) {
+        leaderboardOpenedRef.current = true;
+        playSfx("fanfare");
+        vibrateByEvent("fanfare");
+        setShareNotice("New Best! Opening leaderboard...");
+        window.setTimeout(() => {
+          onGameOver?.(score);
+        }, 650);
+      }
       return;
     }
 
@@ -399,15 +409,16 @@ export default function Game({
 
   const PLAYER_W = 80;
 
-  const vibrateByEvent = (kind: "catch" | "fail" | "combo" | "timeup") => {
+  const vibrateByEvent = (kind: "catch" | "fail" | "combo" | "timeup" | "fanfare") => {
     if (!("vibrate" in navigator)) return;
     if (kind === "catch") navigator.vibrate(14);
     if (kind === "fail") navigator.vibrate(26);
     if (kind === "combo") navigator.vibrate([14, 22, 14]);
     if (kind === "timeup") navigator.vibrate([40, 24, 40]);
+    if (kind === "fanfare") navigator.vibrate([20, 30, 20, 30, 40]);
   };
 
-  const playSfx = (kind: "catch" | "fail" | "combo" | "timeup") => {
+  const playSfx = (kind: "catch" | "fail" | "combo" | "timeup" | "fanfare") => {
     try {
       const Ctx = window.AudioContext || (window as any).webkitAudioContext;
       if (!Ctx) return;
@@ -440,6 +451,12 @@ export default function Game({
       if (kind === "timeup") {
         beep(740, 0.12, "square", 0.04, now);
         beep(520, 0.18, "square", 0.045, now + 0.13);
+      }
+      if (kind === "fanfare") {
+        beep(740, 0.08, "triangle", 0.035, now);
+        beep(940, 0.09, "triangle", 0.038, now + 0.1);
+        beep(1240, 0.12, "triangle", 0.04, now + 0.22);
+        beep(1560, 0.18, "triangle", 0.042, now + 0.36);
       }
     } catch {
       // Ignore audio errors in restricted browsers.
