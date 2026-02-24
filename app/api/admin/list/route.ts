@@ -37,20 +37,22 @@ export async function GET(req: NextRequest) {
   };
 
   const attempts = [
-    () => buildQuery("nickname_key,nickname_display,score,updated_at,character,store", true),
-    () => buildQuery("nickname_key,nickname_display,score,updated_at,store", true),
-    () => buildQuery("nickname_key,nickname_display,score,updated_at,character", false),
-    () => buildQuery("nickname_key,nickname_display,score,updated_at", false),
+    { run: () => buildQuery("nickname_key,nickname_display,score,updated_at,character,store", true), hasStore: true },
+    { run: () => buildQuery("nickname_key,nickname_display,score,updated_at,store", true), hasStore: true },
+    { run: () => buildQuery("nickname_key,nickname_display,score,updated_at,character", false), hasStore: false },
+    { run: () => buildQuery("nickname_key,nickname_display,score,updated_at", false), hasStore: false },
   ];
 
   let data: any[] | null = null;
   let error: { message?: string } | null = null;
+  let supportsStore = false;
 
   for (const attempt of attempts) {
-    const result = await attempt();
+    const result = await attempt.run();
     if (!result.error) {
       data = (result.data as any[] | null) ?? [];
       error = null;
+      supportsStore = attempt.hasStore;
       break;
     }
     error = result.error as { message?: string };
@@ -60,5 +62,5 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Failed to load leaderboard records.", details: error.message }, { status: 500 });
   }
 
-  return NextResponse.json({ rows: data ?? [] });
+  return NextResponse.json({ rows: data ?? [], supportsStore });
 }

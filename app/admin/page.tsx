@@ -34,6 +34,7 @@ export default function AdminPage() {
   const [deletingKey, setDeletingKey] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [storeFilter, setStoreFilter] = useState("__ALL__");
+  const [supportsStore, setSupportsStore] = useState(true);
   const [adminToken, setAdminToken] = useState("");
 
   const verifyAdminPassword = async (rawPassword: string) => {
@@ -64,7 +65,7 @@ export default function AdminPage() {
           Authorization: `Bearer ${token}`,
         },
       });
-      const json = (await res.json()) as { rows?: AdminRow[]; error?: string };
+      const json = (await res.json()) as { rows?: AdminRow[]; supportsStore?: boolean; error?: string };
 
       if (!res.ok) {
         console.error("Admin leaderboard fetch error:", json);
@@ -78,6 +79,10 @@ export default function AdminPage() {
         setRows([]);
       } else {
         setRows(json.rows ?? []);
+        setSupportsStore(Boolean(json.supportsStore));
+        if (!json.supportsStore) {
+          setStoreFilter("__ALL__");
+        }
       }
     } catch (err) {
       console.error("Admin leaderboard fetch exception:", err);
@@ -123,7 +128,10 @@ export default function AdminPage() {
   const filteredRows = useMemo(() => {
     const term = search.trim().toLowerCase();
     return rows.filter((row) => {
-      const storeOk = storeFilter === "__ALL__" || (row.store ?? "") === storeFilter;
+      const normalizedStore = (row.store ?? "").trim().toLowerCase();
+      const normalizedFilter = storeFilter.trim().toLowerCase();
+      const storeOk =
+        !supportsStore || storeFilter === "__ALL__" || normalizedStore === normalizedFilter;
       if (!storeOk) return false;
       if (!term) return true;
       return (
@@ -309,6 +317,7 @@ export default function AdminPage() {
           <select
             value={storeFilter}
             onChange={(e) => setStoreFilter(e.target.value)}
+            disabled={!supportsStore}
             className="rounded-xl border border-[#edb8d3] bg-white px-3 py-2 text-sm font-semibold text-[#5b2041] outline-none sm:w-[220px]"
           >
             <option value="__ALL__">All Stores</option>
@@ -319,6 +328,11 @@ export default function AdminPage() {
             ))}
           </select>
         </div>
+        {!supportsStore && (
+          <p className="mb-4 text-sm font-semibold text-[#8d6280]">
+            현재 배포 DB에는 매장 컬럼이 없어 매장별 필터를 적용할 수 없습니다.
+          </p>
+        )}
 
         <div className="overflow-hidden rounded-2xl border border-[#f3c7dd] bg-white shadow-[0_12px_24px_rgba(150,9,83,0.12)]">
           <div className="grid grid-cols-[2fr_1fr_1fr_1fr_1fr_120px] bg-[#fff2f8] px-4 py-3 text-xs font-black text-[#8a5a75]">
