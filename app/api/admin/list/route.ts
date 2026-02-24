@@ -20,11 +20,45 @@ export async function GET(req: NextRequest) {
     auth: { persistSession: false, autoRefreshToken: false },
   });
 
-  const { data, error } = await adminSupabase
-    .from("leaderboard_best_v2")
-    .select("nickname_key,nickname_display,score,updated_at,character,store")
-    .order("updated_at", { ascending: false })
-    .limit(500);
+  const attempts = [
+    () =>
+      adminSupabase
+        .from("leaderboard_best_v2")
+        .select("nickname_key,nickname_display,score,updated_at,character,store")
+        .order("updated_at", { ascending: false })
+        .limit(500),
+    () =>
+      adminSupabase
+        .from("leaderboard_best_v2")
+        .select("nickname_key,nickname_display,score,updated_at,store")
+        .order("updated_at", { ascending: false })
+        .limit(500),
+    () =>
+      adminSupabase
+        .from("leaderboard_best_v2")
+        .select("nickname_key,nickname_display,score,updated_at,character")
+        .order("updated_at", { ascending: false })
+        .limit(500),
+    () =>
+      adminSupabase
+        .from("leaderboard_best_v2")
+        .select("nickname_key,nickname_display,score,updated_at")
+        .order("updated_at", { ascending: false })
+        .limit(500),
+  ];
+
+  let data: any[] | null = null;
+  let error: { message?: string } | null = null;
+
+  for (const attempt of attempts) {
+    const result = await attempt();
+    if (!result.error) {
+      data = (result.data as any[] | null) ?? [];
+      error = null;
+      break;
+    }
+    error = result.error as { message?: string };
+  }
 
   if (error) {
     return NextResponse.json({ error: "Failed to load leaderboard records.", details: error.message }, { status: 500 });
@@ -32,4 +66,3 @@ export async function GET(req: NextRequest) {
 
   return NextResponse.json({ rows: data ?? [] });
 }
-
