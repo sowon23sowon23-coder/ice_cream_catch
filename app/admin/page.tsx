@@ -24,6 +24,13 @@ function characterLabel(character?: CharId | null) {
   return "-";
 }
 
+function normalizeStoreName(raw?: string | null) {
+  return (raw ?? "")
+    .toLowerCase()
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 export default function AdminPage() {
   const [rows, setRows] = useState<AdminRow[]>([]);
   const [loading, setLoading] = useState(false);
@@ -48,20 +55,13 @@ export default function AdminPage() {
     return { ok: res.ok, error: json.error };
   };
 
-  const loadRows = async (storeOverride?: string) => {
+  const loadRows = async () => {
     const token = adminToken.trim();
     if (!token) return;
-    const effectiveStore = storeOverride ?? storeFilter;
 
     setLoading(true);
     try {
-      const params = new URLSearchParams();
-      if (effectiveStore && effectiveStore !== "__ALL__") {
-        params.set("store", effectiveStore);
-      }
-      const query = params.toString();
-
-      const res = await fetch(`/api/admin/list${query ? `?${query}` : ""}`, {
+      const res = await fetch("/api/admin/list", {
         method: "GET",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -124,15 +124,15 @@ export default function AdminPage() {
 
   useEffect(() => {
     if (!isAuthed || !adminToken.trim()) return;
-    void loadRows(storeFilter);
+    void loadRows();
   }, [isAuthed, adminToken]);
 
   const filteredRows = useMemo(() => {
     const term = search.trim().toLowerCase();
     return rows
       .filter((row) => {
-        const normalizedStore = (row.store ?? "").trim().toLowerCase();
-        const normalizedFilter = storeFilter.trim().toLowerCase();
+        const normalizedStore = normalizeStoreName(row.store);
+        const normalizedFilter = normalizeStoreName(storeFilter);
         const storeOk =
           !supportsStore || storeFilter === "__ALL__" || normalizedStore === normalizedFilter;
         if (!storeOk) return false;
@@ -145,6 +145,12 @@ export default function AdminPage() {
       })
       .sort((a, b) => b.score - a.score || a.nickname_key.localeCompare(b.nickname_key));
   }, [rows, search, storeFilter]);
+
+  const storeChoices = useMemo(() => {
+    const fromRows = Array.from(new Set(rows.map((r) => (r.store ?? "").trim()).filter(Boolean)));
+    const merged = Array.from(new Set([...STORE_OPTIONS, ...fromRows]));
+    return merged.sort((a, b) => a.localeCompare(b));
+  }, [rows]);
 
   const totalUsers = useMemo(() => new Set(rows.map((r) => r.nickname_key)).size, [rows]);
 
@@ -305,7 +311,7 @@ export default function AdminPage() {
           <div className="flex items-center gap-2">
             <button
               type="button"
-              onClick={() => void loadRows(storeFilter)}
+              onClick={() => void loadRows()}
               className="rounded-full border border-[#f2bad5] bg-white px-4 py-2 text-sm font-black text-[#960953]"
             >
               Refresh
@@ -367,7 +373,6 @@ export default function AdminPage() {
                         if (!supportsStore || s.store === "__UNKNOWN__") return;
                         setSearch("");
                         setStoreFilter(s.store);
-                        void loadRows(s.store);
                       }}
                       className="rounded-lg border border-[#edb8d3] bg-white px-2 py-1 text-xs font-black text-[#960953] disabled:opacity-40"
                     >
@@ -395,7 +400,6 @@ export default function AdminPage() {
                 if (!supportsStore) return;
                 setSearch("");
                 setStoreFilter("__ALL__");
-                void loadRows("__ALL__");
               }}
               className={`shrink-0 rounded-lg px-3 py-2 text-sm font-black transition disabled:opacity-40 ${
                 storeFilter === "__ALL__"
@@ -406,14 +410,13 @@ export default function AdminPage() {
               All
             </button>
             <StoreCombobox
-              stores={STORE_OPTIONS}
+              stores={storeChoices}
               value={storeFilter === "__ALL__" ? "" : storeFilter}
               onChange={(store) => {
                 if (!supportsStore) return;
                 const nextStore = store || "__ALL__";
                 setSearch("");
                 setStoreFilter(nextStore);
-                void loadRows(nextStore);
               }}
               placeholder="Search store…"
               wrapperClassName="min-w-0 flex-1"
