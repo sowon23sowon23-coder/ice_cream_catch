@@ -73,7 +73,6 @@ export default function AdminPage() {
       if (!res.ok) {
         console.error("Admin leaderboard fetch error:", json);
         if (res.status === 401) {
-          sessionStorage.removeItem("adminPanelToken");
           setIsAuthed(false);
           setAuthError("세션이 만료되었어요. 다시 로그인해 주세요.");
         } else {
@@ -98,26 +97,10 @@ export default function AdminPage() {
 
   useEffect(() => {
     const boot = async () => {
-      const saved = sessionStorage.getItem("adminPanelToken") || "";
-      if (!saved) {
-        setAuthLoading(false);
-        return;
-      }
-
-      try {
-        const result = await verifyAdminPassword(saved);
-        if (result.ok) {
-          setAdminToken(saved);
-          setIsAuthed(true);
-        } else {
-          sessionStorage.removeItem("adminPanelToken");
-          setIsAuthed(false);
-        }
-      } catch {
-        setIsAuthed(false);
-      } finally {
-        setAuthLoading(false);
-      }
+      // Always require password entry on each admin page visit.
+      setIsAuthed(false);
+      setAdminToken("");
+      setAuthLoading(false);
     };
 
     void boot();
@@ -206,12 +189,10 @@ export default function AdminPage() {
       if (!res.ok) {
         console.error("Delete user score error:", json);
         if (res.status === 401) {
-          sessionStorage.removeItem("adminPanelToken");
           setIsAuthed(false);
         }
         alert("Failed to delete this user's scores.");
       } else {
-        sessionStorage.setItem("adminPanelToken", token);
         setRows((prev) => prev.filter((r) => r.nickname_key !== nicknameKey));
       }
     } catch (err) {
@@ -239,7 +220,6 @@ export default function AdminPage() {
         setAuthLoading(false);
         return;
       }
-      sessionStorage.setItem("adminPanelToken", trimmed);
       setAdminToken(trimmed);
       setIsAuthed(true);
       setPassword("");
