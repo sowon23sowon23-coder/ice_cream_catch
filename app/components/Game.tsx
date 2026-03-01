@@ -159,7 +159,6 @@ export default function Game({
   onExitToHome,
   onBestScore,
   onGameOver,
-  onRoundEnd,
 }: {
   character: CharId;
   mode: GameMode;
@@ -167,7 +166,6 @@ export default function Game({
   onExitToHome: () => void;
   onBestScore: (best: number) => void;
   onGameOver?: (finalScore: number) => void;
-  onRoundEnd?: (finalScore: number) => void;
 }) {
   const [phase, setPhase] = useState<"idle" | "play" | "over">("idle");
   const [countdown, setCountdown] = useState<"mission" | "ready" | "go" | null>(null);
@@ -303,7 +301,6 @@ export default function Game({
     stopAll();
     setPhase("over");
     trackEvent({ action: "game_over", category: "game", label: mode, value: score });
-    onRoundEnd?.(score);
 
     const best = Number(localStorage.getItem("bestScore") || 0);
     const isNewBest = score > best;
