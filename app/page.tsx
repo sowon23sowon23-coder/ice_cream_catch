@@ -8,6 +8,7 @@ import Game from "./components/Game";
 import LeaderboardModal, { LeaderMode, LeaderRow } from "./components/LeaderboardModal";
 import { supabase } from "./lib/supabaseClient";
 import { STORE_OPTIONS } from "./lib/stores";
+import { formatEntryCode } from "./lib/entry";
 
 type CharId = "green" | "berry" | "sprinkle";
 type Phase = "login" | "home" | "game";
@@ -295,6 +296,27 @@ export default function Page() {
   const [feedbackText, setFeedbackText] = useState("");
   const [feedbackLoading, setFeedbackLoading] = useState(false);
   const [feedbackNotice, setFeedbackNotice] = useState<string | null>(null);
+  const [entryCodeBadge, setEntryCodeBadge] = useState<string | null>(null);
+
+  useEffect(() => {
+    const match = document.cookie
+      .split(";")
+      .map((part) => part.trim())
+      .find((part) => part.startsWith("entry_id="));
+
+    if (!match) {
+      setEntryCodeBadge(null);
+      return;
+    }
+
+    const entryId = Number(match.slice("entry_id=".length));
+    if (!Number.isInteger(entryId) || entryId <= 0) {
+      setEntryCodeBadge(null);
+      return;
+    }
+
+    setEntryCodeBadge(formatEntryCode(entryId));
+  }, []);
 
   useEffect(() => {
     const savedNick = (localStorage.getItem("nickname") || "").trim();
@@ -869,6 +891,12 @@ export default function Page() {
               minHeight: phase === "home" ? "min(844px, calc(100dvh - 2rem))" : "auto",
             }}
           >
+            {entryCodeBadge && phase !== "game" && (
+              <div className="mx-4 mt-4 rounded-xl border border-[var(--yl-card-border)] bg-[var(--yl-card-bg)] px-3 py-2 text-xs font-black uppercase tracking-[0.12em] text-[var(--yl-primary)]">
+                Entered: {entryCodeBadge}
+              </div>
+            )}
+
             {phase === "login" && (
               <LoginScreen
                 initialNickname={authNick ?? ""}

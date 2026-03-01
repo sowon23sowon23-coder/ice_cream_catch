@@ -19,6 +19,7 @@ export default function EntryPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [entryCode, setEntryCode] = useState<string | null>(null);
   const [cooldownUntil, setCooldownUntil] = useState<number | null>(null);
 
   const cooldownLeft = useMemo(() => {
@@ -63,8 +64,8 @@ export default function EntryPage() {
         ? `You're in! Entry Code: ${json.entryCode}`
         : `This contact is already entered. Entry Code: ${json.entryCode}`;
       setSuccessMessage(message);
+      setEntryCode(json.entryCode || null);
       setCooldownUntil(Date.now() + 25_000);
-      window.setTimeout(() => router.push("/"), 600);
     } catch {
       setError("Network error. Please try again.");
     } finally {
@@ -77,6 +78,9 @@ export default function EntryPage() {
       <div className="mx-auto w-full max-w-md rounded-3xl border border-[var(--yl-card-border)] bg-white/95 p-5 shadow-[0_24px_56px_rgba(150,9,83,0.2)]">
         <p className="text-xs font-black uppercase tracking-[0.14em] text-[var(--yl-primary)]">Giveaway Entry</p>
         <h1 className="mt-1 text-3xl font-black text-[var(--yl-ink-strong)]">Enter & Start</h1>
+        <p className="mt-2 rounded-xl bg-[var(--yl-card-bg)] px-3 py-2 text-xs font-semibold text-[var(--yl-ink-muted)]">
+          Step 1 of 2: Complete giveaway entry with your phone or email. Step 2: Continue to nickname login.
+        </p>
 
         <form onSubmit={onSubmit} className="mt-5 space-y-4">
           <div className="grid grid-cols-2 gap-2 rounded-2xl border border-[var(--yl-card-border)] bg-[var(--yl-card-bg)] p-1">
@@ -145,6 +149,16 @@ export default function EntryPage() {
           >
             {loading ? "Submitting..." : "Enter & Start"}
           </button>
+
+          {entryCode && (
+            <button
+              type="button"
+              onClick={() => router.push("/")}
+              className="w-full rounded-xl border border-[var(--yl-primary)] bg-white px-4 py-3 text-sm font-black text-[var(--yl-primary)]"
+            >
+              Continue to Game Home
+            </button>
+          )}
         </form>
       </div>
     </main>
