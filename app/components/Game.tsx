@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { trackEvent } from "../lib/gtag";
 
 type CharId = "green" | "berry" | "sprinkle";
@@ -144,6 +144,14 @@ function randomMissionTargetsFrom(images: readonly string[]) {
   return shuffled.slice(0, count);
 }
 
+function pickNextMissionTarget(pool: readonly string[], previous?: string | null) {
+  if (pool.length === 0) return null;
+  if (pool.length === 1) return pool[0];
+  const candidates = previous ? pool.filter((item) => item !== previous) : [...pool];
+  if (candidates.length === 0) return pool[0];
+  return candidates[Math.floor(Math.random() * candidates.length)];
+}
+
 export default function Game({
   character,
   mode,
@@ -170,6 +178,7 @@ export default function Game({
   const [shareNotice, setShareNotice] = useState<string | null>(null);
   const [playerX, setPlayerX] = useState(50);
   const [missionTargets, setMissionTargets] = useState<MissionItemImage[]>([]);
+  const [currentMissionTarget, setCurrentMissionTarget] = useState<MissionItemImage | null>(null);
   const [fallingItemImages, setFallingItemImages] = useState<string[]>(["gummy-bear.png"]);
 
   const [items, setItems] = useState<FallingItem[]>([]);
@@ -202,7 +211,6 @@ export default function Game({
   const catchStreakRef = useRef(0);
   const timeUpSfxPlayedRef = useRef(false);
 
-  const missionSet = useMemo(() => new Set(missionTargets), [missionTargets]);
   const isPaused = false;
 
   useEffect(() => {
@@ -358,7 +366,9 @@ export default function Game({
     trackEvent({ action: "game_start", category: "game", label: mode, value: 0 });
 
     if (mode === "mission") {
-      setMissionTargets(randomMissionTargetsFrom(fallingItemImages));
+      const nextMissionTargets = randomMissionTargetsFrom(fallingItemImages);
+      setMissionTargets(nextMissionTargets);
+      setCurrentMissionTarget(pickNextMissionTarget(nextMissionTargets));
       setCountdown("mission");
       setPhase("idle");
 
@@ -372,6 +382,7 @@ export default function Game({
     }
 
     setMissionTargets([]);
+    setCurrentMissionTarget(null);
     setCountdown("ready");
     setPhase("idle");
 
@@ -692,7 +703,8 @@ export default function Game({
           const speedMultiplier =
             mode === "free" ? freeSpeedMultiplier(scoreRef.current) : 1;
           const ny = item.y + item.v * speedMultiplier;
-          const isMissionTarget = item.image ? missionSet.has(item.image) : false;
+          const isMissionTarget =
+            mode === "mission" && item.image ? item.image === currentMissionTarget : false;
           const inCatchRangeX = Math.abs(item.x - px) <= CATCH_HALF_WIDTH_PCT;
           const inCatchRangeY = ny >= CATCH_Y_START_PCT && ny <= 96;
 
@@ -708,6 +720,9 @@ export default function Game({
                   born: now,
                   kind: "gain",
                 });
+                setCurrentMissionTarget((prevTarget) =>
+                  pickNextMissionTarget(missionTargets, prevTarget)
+                );
               } else {
                 lifeLoss += 1;
                 if (!lifeLossReason) lifeLossReason = { x: item.x, text: "WRONG" };
@@ -804,7 +819,7 @@ export default function Game({
 
     return () => stopAll();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [phase, mode, missionSet, fallingItemImages]);
+  }, [phase, mode, missionTargets, currentMissionTarget, fallingItemImages]);
 
   return (
     <main className="h-full min-h-full bg-gradient-to-b from-pink-100 to-blue-100 flex items-start sm:items-center justify-center overflow-y-auto p-2 sm:p-4">
@@ -936,7 +951,7 @@ export default function Game({
           </div>
         )}
 
-        {mode === "mission" && missionTargets.length > 0 && (
+        {mode === "mission" && currentMissionTarget && (
           <div className="mb-2 rounded-xl border border-amber-200 bg-amber-50 px-2.5 py-1.5 text-center text-xs font-bold text-amber-900 sm:mb-3 sm:rounded-2xl sm:px-4 sm:py-2 sm:text-sm">
             <p className="text-[10px] font-black uppercase tracking-[0.1em] text-amber-800 sm:text-xs sm:tracking-[0.12em]">
               Mission Progress: {Math.min(score, MISSION_GOAL_SCORE)}/{MISSION_GOAL_SCORE}
@@ -949,16 +964,13 @@ export default function Game({
             </div>
             <p className="mt-1 text-[11px] sm:text-sm">Catch only:</p>
             <div className="mt-1 flex items-center justify-center gap-1.5 sm:mt-2 sm:gap-2">
-              {missionTargets.map((target) => (
-                <img
-                  key={target}
-                  src={`/${target}`}
-                  alt={target}
-                  className="h-5 w-5 object-contain sm:h-7 sm:w-7"
-                  draggable={false}
-                  style={{ transform: `scale(${imageScaleBoost(target)})` }}
-                />
-              ))}
+              <img
+                src={`/${currentMissionTarget}`}
+                alt={currentMissionTarget}
+                className="h-5 w-5 object-contain sm:h-7 sm:w-7"
+                draggable={false}
+                style={{ transform: `scale(${imageScaleBoost(currentMissionTarget)})` }}
+              />
             </div>
           </div>
         )}
@@ -1046,16 +1058,16 @@ export default function Game({
                       Topping Mission
                     </div>
                     <div className="flex items-center justify-center gap-2">
-                      {missionTargets.map((target) => (
+                      {currentMissionTarget && (
                         <img
-                          key={`countdown-${target}`}
-                          src={`/${target}`}
-                          alt={target}
+                          key={`countdown-${currentMissionTarget}`}
+                          src={`/${currentMissionTarget}`}
+                          alt={currentMissionTarget}
                           className="h-9 w-9 object-contain"
                           draggable={false}
-                          style={{ transform: `scale(${imageScaleBoost(target)})` }}
+                          style={{ transform: `scale(${imageScaleBoost(currentMissionTarget)})` }}
                         />
-                      ))}
+                      )}
                     </div>
                   </>
                 ) : (
