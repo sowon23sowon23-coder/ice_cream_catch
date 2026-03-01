@@ -6,11 +6,13 @@ export function middleware(req: NextRequest) {
   }
 
   const entryId = req.cookies.get("entry_id")?.value;
-  const target = entryId ? "/game" : "/entry";
-  return NextResponse.redirect(new URL(target, req.url));
+  if (!entryId) {
+    return NextResponse.redirect(new URL("/entry", req.url));
+  }
+
+  return NextResponse.next();
 }
 
 export const config = {
   matcher: ["/"],
 };
-

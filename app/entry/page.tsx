@@ -64,7 +64,7 @@ export default function EntryPage() {
         : `This contact is already entered. Entry Code: ${json.entryCode}`;
       setSuccessMessage(message);
       setCooldownUntil(Date.now() + 25_000);
-      window.setTimeout(() => router.push("/game"), 600);
+      window.setTimeout(() => router.push("/"), 600);
     } catch {
       setError("Network error. Please try again.");
     } finally {
@@ -150,4 +150,3 @@ export default function EntryPage() {
     </main>
   );
 }
-
