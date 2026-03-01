@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { enforceRateLimit } from "../../lib/rateLimit";
 import { type EntryContactType, formatEntryCode, normalizeEmail, normalizeUsPhone } from "../../lib/entry";
 import { getServerSupabase } from "../../lib/serverSupabase";
 
@@ -21,8 +20,31 @@ function normalizeByType(contactType: EntryContactType, rawValue: string): strin
 }
 
 export async function POST(req: NextRequest) {
+  const supabase = getServerSupabase();
+  if (!supabase) {
+    return NextResponse.json({ error: "Server is not configured." }, { status: 500 });
+  }
+
   const ip = getClientIp(req);
-  const allowed = enforceRateLimit(`entry:${ip}`, 3, 60_000);
+  const key = `entry:ip:${ip}`;
+  const rateLimitRes = await supabase.rpc("check_rate_limit", {
+    p_key: key,
+    p_limit: 3,
+    p_window_seconds: 60,
+  });
+
+  if (rateLimitRes.error) {
+    return NextResponse.json({ error: "Rate limit check failed." }, { status: 500 });
+  }
+
+  const rpcData = rateLimitRes.data as unknown;
+  const allowed =
+    typeof rpcData === "boolean"
+      ? rpcData
+      : Array.isArray(rpcData)
+        ? Boolean((rpcData[0] as { allowed?: boolean } | undefined)?.allowed)
+        : Boolean((rpcData as { allowed?: boolean } | null)?.allowed);
+
   if (!allowed) {
     return NextResponse.json({ error: "Too many requests. Please try again in a minute." }, { status: 429 });
   }
@@ -48,11 +70,6 @@ export async function POST(req: NextRequest) {
   const normalized = normalizeByType(contactType, contactValue);
   if (!normalized) {
     return NextResponse.json({ error: "Invalid contact format." }, { status: 400 });
-  }
-
-  const supabase = getServerSupabase();
-  if (!supabase) {
-    return NextResponse.json({ error: "Server is not configured." }, { status: 500 });
   }
 
   const nowIso = new Date().toISOString();
