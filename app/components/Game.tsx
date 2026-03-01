@@ -366,9 +366,10 @@ export default function Game({
     trackEvent({ action: "game_start", category: "game", label: mode, value: 0 });
 
     if (mode === "mission") {
-      const nextMissionTargets = randomMissionTargetsFrom(fallingItemImages);
+      const missionPool = fallingItemImages.length > 0 ? fallingItemImages : ["gummy-bear.png"];
+      const nextMissionTargets = randomMissionTargetsFrom(missionPool);
       setMissionTargets(nextMissionTargets);
-      setCurrentMissionTarget(pickNextMissionTarget(nextMissionTargets));
+      setCurrentMissionTarget(pickNextMissionTarget(missionPool));
       setCountdown("mission");
       setPhase("idle");
 
@@ -721,7 +722,7 @@ export default function Game({
                   kind: "gain",
                 });
                 setCurrentMissionTarget((prevTarget) =>
-                  pickNextMissionTarget(missionTargets, prevTarget)
+                  pickNextMissionTarget(fallingItemImages, prevTarget)
                 );
               } else {
                 lifeLoss += 1;
@@ -819,7 +820,7 @@ export default function Game({
 
     return () => stopAll();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [phase, mode, missionTargets, currentMissionTarget, fallingItemImages]);
+  }, [phase, mode, currentMissionTarget, fallingItemImages]);
 
   return (
     <main className="h-full min-h-full bg-gradient-to-b from-pink-100 to-blue-100 flex items-start sm:items-center justify-center overflow-y-auto p-2 sm:p-4">
