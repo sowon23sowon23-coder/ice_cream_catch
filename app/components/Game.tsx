@@ -966,7 +966,9 @@ export default function Game({
         <div
           ref={areaRef}
           onMouseMove={(e) => phase === "play" && move(e.clientX)}
-          className={`relative aspect-[9/16] rounded-3xl overflow-hidden shadow-xl ring-1 ring-white/50 touch-none ${
+          className={`relative ${
+            mode === "mission" ? "aspect-[3/4] sm:aspect-[9/16]" : "aspect-[9/16]"
+          } rounded-3xl overflow-hidden shadow-xl ring-1 ring-white/50 touch-none ${
             shake ? "animate-shake" : ""
           }`}
           style={{
