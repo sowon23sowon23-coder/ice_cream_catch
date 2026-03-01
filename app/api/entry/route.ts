@@ -8,6 +8,15 @@ type EntryRequest = {
   consent?: boolean;
 };
 
+function isMissingDbObjectError(message?: string | null): boolean {
+  const m = (message || "").toLowerCase();
+  return (
+    m.includes("could not find the table") ||
+    (m.includes("relation") && m.includes("does not exist")) ||
+    (m.includes("function") && m.includes("does not exist"))
+  );
+}
+
 function getClientIp(req: NextRequest): string {
   const forwarded = req.headers.get("x-forwarded-for");
   if (forwarded) return forwarded.split(",")[0].trim();
@@ -34,6 +43,15 @@ export async function POST(req: NextRequest) {
   });
 
   if (rateLimitRes.error) {
+    if (isMissingDbObjectError(rateLimitRes.error.message)) {
+      return NextResponse.json(
+        {
+          error:
+            "Entry DB is not initialized. Run migrations: 20260301_create_entries.sql and 20260301_add_check_rate_limit.sql.",
+        },
+        { status: 500 }
+      );
+    }
     return NextResponse.json({ error: "Rate limit check failed." }, { status: 500 });
   }
 
@@ -105,6 +123,15 @@ export async function POST(req: NextRequest) {
     entryId = Number(existingRes.data.id);
     isNew = false;
   } else {
+    if (isMissingDbObjectError(insertRes.error?.message)) {
+      return NextResponse.json(
+        {
+          error:
+            "Entry DB is not initialized. Run migrations: 20260301_create_entries.sql and 20260301_add_check_rate_limit.sql.",
+        },
+        { status: 500 }
+      );
+    }
     return NextResponse.json({ error: insertRes.error?.message || "Failed to create entry." }, { status: 500 });
   }
 

@@ -865,6 +865,18 @@ export default function Page() {
     }
   };
 
+  const saveEntryBestScore = async (score: number) => {
+    try {
+      await fetch("/api/score", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ score }),
+      });
+    } catch (err) {
+      console.error("Entry score save failed:", err);
+    }
+  };
+
   return (
     <>
       <main
@@ -939,6 +951,9 @@ export default function Page() {
                 mode={gameMode}
                 startSignal={startSignal}
                 onExitToHome={() => setPhase("home")}
+                onRoundEnd={async (finalScore: number) => {
+                  await saveEntryBestScore(finalScore);
+                }}
                 onBestScore={(newBest: number) => {
                   setBest(newBest);
                   localStorage.setItem("bestScore", String(newBest));
