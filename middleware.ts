@@ -5,12 +5,7 @@ export function middleware(req: NextRequest) {
     return NextResponse.next();
   }
 
-  const entryId = req.cookies.get("entry_id")?.value;
-  if (!entryId) {
-    return NextResponse.redirect(new URL("/entry", req.url));
-  }
-
-  return NextResponse.next();
+  return NextResponse.redirect(new URL("/entry", req.url));
 }
 
 export const config = {

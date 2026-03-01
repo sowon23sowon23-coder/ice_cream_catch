@@ -79,7 +79,7 @@ export default function EntryPage() {
         <p className="text-xs font-black uppercase tracking-[0.14em] text-[var(--yl-primary)]">Giveaway Entry</p>
         <h1 className="mt-1 text-3xl font-black text-[var(--yl-ink-strong)]">Enter & Start</h1>
         <p className="mt-2 rounded-xl bg-[var(--yl-card-bg)] px-3 py-2 text-xs font-semibold text-[var(--yl-ink-muted)]">
-          Step 1 of 2: Complete giveaway entry with your phone or email. Step 2: Continue to nickname login.
+          Complete giveaway entry, then continue directly to the game.
         </p>
 
         <form onSubmit={onSubmit} className="mt-5 space-y-4">
@@ -153,10 +153,10 @@ export default function EntryPage() {
           {entryCode && (
             <button
               type="button"
-              onClick={() => router.push("/")}
+              onClick={() => router.push("/game")}
               className="w-full rounded-xl border border-[var(--yl-primary)] bg-white px-4 py-3 text-sm font-black text-[var(--yl-primary)]"
             >
-              Continue to Game Home
+              Continue to Game
             </button>
           )}
         </form>
