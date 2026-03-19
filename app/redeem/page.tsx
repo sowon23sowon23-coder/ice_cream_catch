@@ -17,14 +17,18 @@ interface CouponData {
   issuedAt: string;
 }
 
-interface RedeemResult {
+interface HistoryItem {
+  type: "success" | "already_used";
   code: string;
-  discountAmount: number;
+  discountAmount?: number;
   redeemedAt: string;
-  storeId: string;
-  staffId: string;
+  storeId?: string;
+  staffId?: string;
   orderNumber?: string;
 }
+
+// Keep alias for backward compat in this file
+type RedeemResult = HistoryItem;
 
 // ─────────────────────────────────────────────
 // Staff Login Screen
@@ -269,47 +273,65 @@ function HistoryView({
 
       {/* History list */}
       <div className="space-y-3">
-        {history.map((item, idx) => (
-          <div
-            key={idx}
-            className={`bg-white rounded-2xl p-4 flex items-center gap-4 ${idx === 0 ? "ring-2 ring-green-400" : ""}`}
-          >
-            {/* Index badge */}
-            <div className={`shrink-0 w-10 h-10 rounded-full flex items-center justify-center text-sm font-black
-              ${idx === 0 ? "bg-green-500 text-white" : "bg-gray-100 text-gray-400"}`}>
-              {idx === 0 ? "✓" : history.length - idx}
-            </div>
-
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 mb-0.5">
-                <span className="font-mono font-black text-[#960853] tracking-wider text-sm">
-                  {item.code}
-                </span>
-                <span className="text-xs text-gray-400">
-                  {new Date(item.redeemedAt).toLocaleTimeString("ko-KR", {
-                    hour: "2-digit",
-                    minute: "2-digit",
-                    second: "2-digit",
-                  })}
-                </span>
+        {history.map((item, idx) => {
+          const isSuccess = item.type === "success";
+          const isFirst = idx === 0;
+          return (
+            <div
+              key={idx}
+              className={`bg-white rounded-2xl p-4 flex items-center gap-4 ${
+                isFirst && isSuccess ? "ring-2 ring-green-400" :
+                isFirst && !isSuccess ? "ring-2 ring-gray-400" : ""
+              }`}
+            >
+              {/* Badge */}
+              <div className={`shrink-0 w-10 h-10 rounded-full flex items-center justify-center text-sm font-black ${
+                isSuccess
+                  ? isFirst ? "bg-green-500 text-white" : "bg-green-100 text-green-600"
+                  : isFirst ? "bg-gray-400 text-white" : "bg-gray-100 text-gray-400"
+              }`}>
+                {isSuccess ? (isFirst ? "✓" : "✓") : "✗"}
               </div>
-              <div className="flex items-center gap-2 text-xs text-gray-500 flex-wrap">
-                <span className="font-bold text-gray-800">
-                  {item.discountAmount.toLocaleString("ko-KR")}원 할인
-                </span>
-                {item.orderNumber && (
-                  <span className="text-gray-400">주문 #{item.orderNumber}</span>
-                )}
-              </div>
-            </div>
 
-            {idx === 0 && (
-              <span className="shrink-0 text-xs bg-green-100 text-green-700 font-bold px-2 py-1 rounded-full">
-                방금 처리
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 mb-0.5">
+                  <span className={`font-mono font-black tracking-wider text-sm ${isSuccess ? "text-[#960853]" : "text-gray-400"}`}>
+                    {item.code}
+                  </span>
+                  <span className="text-xs text-gray-400">
+                    {new Date(item.redeemedAt).toLocaleTimeString("ko-KR", {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                      second: "2-digit",
+                    })}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2 text-xs flex-wrap">
+                  {isSuccess && item.discountAmount != null ? (
+                    <>
+                      <span className="font-bold text-gray-800">
+                        {item.discountAmount.toLocaleString("ko-KR")}원 할인
+                      </span>
+                      {item.orderNumber && (
+                        <span className="text-gray-400">주문 #{item.orderNumber}</span>
+                      )}
+                    </>
+                  ) : (
+                    <span className="text-gray-400">이미 사용된 쿠폰</span>
+                  )}
+                </div>
+              </div>
+
+              <span className={`shrink-0 text-xs font-bold px-2 py-1 rounded-full ${
+                isSuccess
+                  ? isFirst ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"
+                  : "bg-gray-100 text-gray-500"
+              }`}>
+                {isSuccess ? (isFirst ? "방금 처리" : "사용 완료") : "이미 사용됨"}
               </span>
-            )}
-          </div>
-        ))}
+            </div>
+          );
+        })}
       </div>
 
       {history.length === 0 && (
@@ -333,7 +355,7 @@ function ScanView({
   storeId: string;
   staffId: string;
   initialCode: string;
-  onRedeemed: (result: RedeemResult) => void;
+  onRedeemed: (item: HistoryItem) => void;
 }) {
   const [code, setCode] = useState(initialCode);
   const [orderNumber, setOrderNumber] = useState("");
@@ -380,6 +402,14 @@ function ScanView({
       if (data.valid) {
         setStatus("valid");
         setCoupon(data.coupon);
+      } else if (data.status === "used") {
+        // Already redeemed → immediately push to history
+        onRedeemed({
+          type: "already_used",
+          code: target,
+          discountAmount: data.coupon?.discountAmount,
+          redeemedAt: new Date().toISOString(),
+        });
       } else {
         setStatus((data.status as RedeemStatus) ?? "invalid");
         setReason(data.reason ?? "");
@@ -413,6 +443,7 @@ function ScanView({
       if (data.success) {
         // Immediately hand off to history view
         onRedeemed({
+          type: "success",
           code: data.code,
           discountAmount: data.discountAmount,
           redeemedAt: data.redeemedAt,
@@ -534,8 +565,8 @@ function RedeemScreen({
   const [view, setView] = useState<"scan" | "history">("scan");
   const [history, setHistory] = useState<RedeemResult[]>([]);
 
-  const handleRedeemed = (result: RedeemResult) => {
-    setHistory((prev) => [result, ...prev]);
+  const handleRedeemed = (item: HistoryItem) => {
+    setHistory((prev) => [item, ...prev]);
     setView("history");
   };
 
