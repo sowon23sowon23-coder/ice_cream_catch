@@ -249,6 +249,174 @@ function CreateCouponModal({
 }
 
 // ─────────────────────────────────────────────
+// Ad Banner Manager
+// ─────────────────────────────────────────────
+const BANNER_POSITIONS = [
+  { id: "leaderboard", label: "리더보드 (게임 오버 후)", desc: "모달 하단 배너" },
+  { id: "home",        label: "홈 화면",                desc: "캐릭터/모드 선택 하단" },
+  { id: "coupon",      label: "쿠폰 발급 화면",          desc: "쿠폰 카드 하단" },
+] as const;
+
+type BannerPos = (typeof BANNER_POSITIONS)[number]["id"];
+
+interface BannerState {
+  imageUrl: string;
+  linkUrl: string;
+  active: boolean;
+}
+
+function AdBannerManager({ token }: { token: string }) {
+  const [banners, setBanners] = useState<Record<BannerPos, BannerState>>({
+    leaderboard: { imageUrl: "", linkUrl: "", active: true },
+    home:        { imageUrl: "", linkUrl: "", active: true },
+    coupon:      { imageUrl: "", linkUrl: "", active: true },
+  });
+  const [saving, setSaving] = useState<BannerPos | null>(null);
+  const [saved, setSaved] = useState<BannerPos | null>(null);
+  const [loaded, setLoaded] = useState(false);
+
+  useEffect(() => {
+    fetch("/api/ads")
+      .then((r) => r.json())
+      .then((data) => {
+        const map = data.banners ?? {};
+        setBanners((prev) => {
+          const next = { ...prev };
+          for (const pos of BANNER_POSITIONS) {
+            if (map[pos.id]) {
+              next[pos.id] = {
+                imageUrl: map[pos.id].imageUrl ?? "",
+                linkUrl: map[pos.id].linkUrl ?? "",
+                active: map[pos.id].active ?? true,
+              };
+            }
+          }
+          return next;
+        });
+        setLoaded(true);
+      });
+  }, []);
+
+  const handleSave = async (id: BannerPos) => {
+    setSaving(id);
+    try {
+      const res = await fetch("/api/admin/ads", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          id,
+          imageUrl: banners[id].imageUrl,
+          linkUrl: banners[id].linkUrl || "",
+          active: banners[id].active,
+        }),
+      });
+      if (res.ok) {
+        setSaved(id);
+        setTimeout(() => setSaved(null), 2000);
+      }
+    } finally {
+      setSaving(null);
+    }
+  };
+
+  const update = (id: BannerPos, field: keyof BannerState, value: string | boolean) => {
+    setBanners((prev) => ({ ...prev, [id]: { ...prev[id], [field]: value } }));
+  };
+
+  if (!loaded) return null;
+
+  return (
+    <div className="bg-white rounded-2xl overflow-hidden shadow-sm">
+      <div className="px-5 py-4 border-b border-gray-100">
+        <h2 className="font-black text-gray-800">광고 배너 관리</h2>
+        <p className="text-xs text-gray-400 mt-0.5">이미지 URL을 입력하면 각 위치에 광고가 표시됩니다</p>
+      </div>
+
+      <div className="divide-y divide-gray-50">
+        {BANNER_POSITIONS.map((pos) => {
+          const b = banners[pos.id];
+          const isSaving = saving === pos.id;
+          const isSaved = saved === pos.id;
+
+          return (
+            <div key={pos.id} className="px-5 py-4 flex flex-col md:flex-row md:items-start gap-4">
+              {/* Info */}
+              <div className="md:w-44 shrink-0">
+                <p className="font-bold text-gray-800 text-sm">{pos.label}</p>
+                <p className="text-xs text-gray-400">{pos.desc}</p>
+                <label className="flex items-center gap-1.5 mt-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={b.active}
+                    onChange={(e) => update(pos.id, "active", e.target.checked)}
+                    className="accent-[#960853]"
+                  />
+                  <span className="text-xs text-gray-500">활성화</span>
+                </label>
+              </div>
+
+              {/* Preview */}
+              <div className="md:w-40 shrink-0">
+                {b.imageUrl ? (
+                  <img
+                    src={b.imageUrl}
+                    alt="미리보기"
+                    className="w-full h-20 object-cover rounded-xl border border-gray-100"
+                    onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+                  />
+                ) : (
+                  <div className="w-full h-20 bg-gradient-to-r from-[#fdf0f6] to-[#f3c6de] rounded-xl border border-[#f3c6de] flex items-center justify-center">
+                    <span className="text-xs text-[#960853]/40 font-bold">이미지 없음</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Inputs */}
+              <div className="flex-1 space-y-2">
+                <div>
+                  <label className="block text-xs text-gray-500 mb-1">이미지 URL</label>
+                  <input
+                    type="url"
+                    value={b.imageUrl}
+                    onChange={(e) => update(pos.id, "imageUrl", e.target.value)}
+                    placeholder="https://example.com/banner.jpg"
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#960853] transition-colors"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-500 mb-1">클릭 링크 (선택)</label>
+                  <input
+                    type="url"
+                    value={b.linkUrl}
+                    onChange={(e) => update(pos.id, "linkUrl", e.target.value)}
+                    placeholder="https://yogurtland.com/..."
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#960853] transition-colors"
+                  />
+                </div>
+                <button
+                  onClick={() => handleSave(pos.id)}
+                  disabled={isSaving}
+                  className={`px-4 py-2 rounded-lg text-sm font-bold transition-colors ${
+                    isSaved
+                      ? "bg-green-500 text-white"
+                      : "bg-[#960853] text-white hover:bg-[#6e0339] disabled:opacity-50"
+                  }`}
+                >
+                  {isSaving ? "저장 중..." : isSaved ? "✓ 저장됨" : "저장"}
+                </button>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────
 // Main Dashboard
 // ─────────────────────────────────────────────
 function Dashboard({ token }: { token: string }) {
@@ -589,6 +757,8 @@ function Dashboard({ token }: { token: string }) {
           )}
         </div>
       </div>
+
+      <AdBannerManager token={token} />
 
       {showCreateModal && (
         <CreateCouponModal

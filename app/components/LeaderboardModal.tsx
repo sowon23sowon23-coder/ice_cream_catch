@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import StoreCombobox from "./StoreCombobox";
+import AdBanner from "./AdBanner";
 
 type CharId = "green" | "berry" | "sprinkle";
 
@@ -209,6 +210,8 @@ export default function LeaderboardModal({
               </div>
             )}
           </div>
+
+          <AdBanner position="leaderboard" className="mt-4" />
 
           <button
             onClick={onClose}

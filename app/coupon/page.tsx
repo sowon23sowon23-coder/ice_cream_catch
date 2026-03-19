@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import QRCode from "qrcode";
 import { formatDate, formatDiscount } from "@/app/lib/couponUtils";
 import Link from "next/link";
+import AdBanner from "@/app/components/AdBanner";
 
 interface CouponInfo {
   id: number;
@@ -200,7 +201,9 @@ function CouponPageContent() {
         </div>
       </div>
 
-      <div className="mt-6">
+      <AdBanner position="coupon" className="mt-4 w-full max-w-sm" />
+
+      <div className="mt-4">
         <Link
           href="/"
           className="text-sm text-[#960853] hover:underline font-medium"

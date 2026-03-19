@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { trackEvent } from "../lib/gtag";
+import AdBanner from "./AdBanner";
 
 type CharId = "green" | "berry" | "sprinkle";
 type GameMode = "free" | "mission" | "timeAttack";
@@ -188,6 +189,8 @@ export default function HomeScreen({
             Selected: {selectedCharacter.label} · {MODES.find((m) => m.id === mode)?.label}
           </p>
         </section>
+
+        <AdBanner position="home" className="mt-3" />
       </div>
     </main>
   );
