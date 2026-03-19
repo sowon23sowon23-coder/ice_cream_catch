@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { trackEvent } from "./lib/gtag";
+import { MIN_SCORE_FOR_COUPON } from "./lib/couponUtils";
 import LoginScreen from "./components/LoginScreen";
 import HomeScreen from "./components/HomeScreen";
 import Game from "./components/Game";
@@ -295,6 +296,7 @@ export default function Page() {
   const [feedbackText, setFeedbackText] = useState("");
   const [feedbackLoading, setFeedbackLoading] = useState(false);
   const [feedbackNotice, setFeedbackNotice] = useState<string | null>(null);
+  const [earnedCouponCode, setEarnedCouponCode] = useState<string | null>(null);
 
   useEffect(() => {
     const savedNick = (localStorage.getItem("nickname") || "").trim();
@@ -942,6 +944,23 @@ export default function Page() {
 
                   writeLocalAllTimeBest(nick || "guest", normalizedStore, finalScore);
 
+                  // Issue coupon if score qualifies
+                  if (finalScore >= MIN_SCORE_FOR_COUPON && isFreePlay) {
+                    try {
+                      const res = await fetch("/api/coupons/issue", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ userId: nick || undefined, score: finalScore }),
+                      });
+                      const data = await res.json();
+                      if (data.success && data.coupon?.code) {
+                        setEarnedCouponCode(data.coupon.code);
+                      }
+                    } catch (e) {
+                      console.error("Coupon issue error:", e);
+                    }
+                  }
+
                   if (nick.length >= 2 && nick.length <= 12) {
                     await upsertBestScore(nick, finalScore, character, normalizedStore, false, false);
 
@@ -1093,6 +1112,32 @@ export default function Page() {
                 Close
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Coupon earned toast */}
+      {earnedCouponCode && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[200] w-full max-w-sm px-4 animate-bounce">
+          <div className="bg-[#960853] text-white rounded-2xl shadow-2xl p-4 flex items-center gap-3">
+            <span className="text-3xl">🎟️</span>
+            <div className="flex-1 min-w-0">
+              <p className="font-black text-sm">쿠폰 발급 완료!</p>
+              <p className="text-white/80 text-xs truncate">코드: {earnedCouponCode}</p>
+            </div>
+            <a
+              href={`/coupon?code=${earnedCouponCode}`}
+              className="bg-white text-[#960853] px-3 py-1.5 rounded-xl text-xs font-black shrink-0 hover:bg-pink-50"
+              onClick={() => setEarnedCouponCode(null)}
+            >
+              쿠폰 보기
+            </a>
+            <button
+              onClick={() => setEarnedCouponCode(null)}
+              className="text-white/60 hover:text-white text-lg leading-none shrink-0"
+            >
+              ×
+            </button>
           </div>
         </div>
       )}
