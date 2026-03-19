@@ -44,12 +44,14 @@ function WalletPageContent() {
 
     setUserId(nextUserId);
 
-    supabase
-      .from("coupons")
-      .select("id, code, discount_amount, reward_type, status, issued_at, expires_at, redeemed_at")
-      .eq("user_id", nextUserId)
-      .order("issued_at", { ascending: false })
-      .then(({ data, error }) => {
+    void (async () => {
+      try {
+        const { data, error } = await supabase
+          .from("coupons")
+          .select("id, code, discount_amount, reward_type, status, issued_at, expires_at, redeemed_at")
+          .eq("user_id", nextUserId)
+          .order("issued_at", { ascending: false });
+
         if (error) {
           setError("지갑을 불러오지 못했습니다.");
           return;
@@ -66,9 +68,12 @@ function WalletPageContent() {
             redeemedAt: c.redeemed_at,
           }))
         );
-      })
-      .catch(() => setError("지갑을 불러오지 못했습니다."))
-      .finally(() => setLoading(false));
+      } catch {
+        setError("지갑을 불러오지 못했습니다.");
+      } finally {
+        setLoading(false);
+      }
+    })();
   }, [params]);
 
   const summary = useMemo(() => {
