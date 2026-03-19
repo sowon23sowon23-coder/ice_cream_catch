@@ -773,30 +773,8 @@ export default function Page() {
     const trimmed = nickname.trim();
     setLoginLoading(true);
 
-    let finalStore = selectedStore;
-
-    try {
-      const key = normalizeNick(trimmed);
-      const { data } = await supabase
-        .from("leaderboard_best_v2")
-        .select("store")
-        .eq("nickname_key", key)
-        .not("store", "is", null)
-        .order("updated_at", { ascending: false })
-        .limit(1);
-
-      const dbStore = (data?.[0] as { store?: string } | undefined)?.store?.trim();
-      if (dbStore && dbStore !== "__ALL__" && STORE_OPTIONS.includes(dbStore)) {
-        finalStore = dbStore;
-        setSelectedStore(dbStore);
-        localStorage.setItem("selectedStore", dbStore);
-      }
-    } catch {
-      // fail silently — use the store selected on the login form
-    }
-
     // Reset best score display to this user's own local history
-    const myLocalBest = readSyncedLocalAllTimeBest(trimmed, finalStore) ?? 0;
+    const myLocalBest = readSyncedLocalAllTimeBest(trimmed, selectedStore) ?? 0;
     localStorage.setItem("bestScore", String(myLocalBest));
     setBest(myLocalBest);
 
@@ -874,9 +852,6 @@ export default function Page() {
             {phase === "login" && (
               <LoginScreen
                 initialNickname={authNick ?? ""}
-                stores={STORE_OPTIONS}
-                selectedStore={selectedStore}
-                onStoreChange={setSelectedStore}
                 onLogin={onLogin}
                 onDeleteNickname={() => {
                   localStorage.removeItem("nickname");
