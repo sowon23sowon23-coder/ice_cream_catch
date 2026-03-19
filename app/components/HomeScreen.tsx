@@ -37,12 +37,14 @@ export default function HomeScreen({
   bestScore,
   onStart,
   onOpenLeaderboard,
+  onOpenWallet,
   onOpenAdmin,
 }: {
   nickname?: string;
   bestScore: number;
   onStart: (character: CharId, mode: GameMode) => void;
   onOpenLeaderboard: () => void;
+  onOpenWallet: () => void;
   onOpenAdmin: () => void;
 }) {
   const [character, setCharacter] = useState<CharId>("green");
@@ -113,14 +115,26 @@ export default function HomeScreen({
               <p className="text-xs font-extrabold uppercase tracking-[0.14em] text-[var(--yl-primary)]">Best Score</p>
               <p className="text-2xl font-black text-[var(--yl-ink-strong)]">{bestScore}</p>
             </div>
-            <button
-              type="button"
-              onClick={onOpenLeaderboard}
-              className="rounded-full border border-[var(--yl-card-border)] bg-white px-3 py-1.5 text-sm font-black text-[var(--yl-primary)] shadow-sm transition hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--yl-focus-ring)]"
-            >
-              Leaderboard
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={onOpenWallet}
+                className="rounded-full border border-[var(--yl-card-border)] bg-[#fff6fb] px-3 py-1.5 text-sm font-black text-[var(--yl-primary)] shadow-sm transition hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--yl-focus-ring)]"
+              >
+                My Wallet
+              </button>
+              <button
+                type="button"
+                onClick={onOpenLeaderboard}
+                className="rounded-full border border-[var(--yl-card-border)] bg-white px-3 py-1.5 text-sm font-black text-[var(--yl-primary)] shadow-sm transition hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--yl-focus-ring)]"
+              >
+                Leaderboard
+              </button>
+            </div>
           </div>
+          <p className="mt-3 text-xs font-bold text-[var(--yl-ink-muted)]">
+            Free Play에서 10점 이상이면 쿠폰이 발급됩니다.
+          </p>
         </section>
 
         <section className="mb-3">

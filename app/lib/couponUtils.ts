@@ -2,7 +2,7 @@
 const CODE_ALPHABET = "23456789ABCDEFGHJKLMNPQRSTUVWXYZ";
 const CODE_LENGTH = 8;
 
-// generateCouponCode is server-only — uses dynamic require to avoid
+// generateCouponCode is server-only and uses dynamic require to avoid
 // bundling Node's `crypto` into the client-side bundle.
 export function generateCouponCode(): string {
   // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -17,7 +17,7 @@ export function generateCouponCode(): string {
 
 export interface ScoreTier {
   minScore: number;
-  discountAmount: number; // in KRW (e.g. 3000 = ₩3,000)
+  discountAmount: number; // in KRW
   label: string;
   expiryDays: number;
 }
@@ -26,6 +26,7 @@ export const SCORE_TIERS: ScoreTier[] = [
   { minScore: 90, discountAmount: 3000, label: "3,000원 할인", expiryDays: 30 },
   { minScore: 70, discountAmount: 2000, label: "2,000원 할인", expiryDays: 30 },
   { minScore: 50, discountAmount: 1000, label: "1,000원 할인", expiryDays: 30 },
+  { minScore: 10, discountAmount: 1000, label: "1,000원 할인", expiryDays: 30 },
 ];
 
 export const MIN_SCORE_FOR_COUPON = SCORE_TIERS[SCORE_TIERS.length - 1].minScore;

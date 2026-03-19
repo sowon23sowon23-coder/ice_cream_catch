@@ -900,6 +900,11 @@ export default function Page() {
                   setStartSignal((n) => n + 1);
                 }}
                 onOpenLeaderboard={openLeaderboard}
+                onOpenWallet={() => {
+                  const nick = (authNick ?? localStorage.getItem("nickname") ?? "").trim();
+                  if (!nick) return;
+                  window.location.href = `/wallet?userId=${encodeURIComponent(nick)}`;
+                }}
                 onOpenAdmin={() => {
                   trackEvent({ action: "tools_open_click", category: "engagement" });
                   setToolsOpen(true);
@@ -1126,11 +1131,11 @@ export default function Page() {
               <p className="text-white/80 text-xs truncate">코드: {earnedCouponCode}</p>
             </div>
             <a
-              href={`/coupon?code=${earnedCouponCode}`}
+              href={authNick ? `/wallet?userId=${encodeURIComponent(authNick)}` : "#"}
               className="bg-white text-[#960853] px-3 py-1.5 rounded-xl text-xs font-black shrink-0 hover:bg-pink-50"
               onClick={() => setEarnedCouponCode(null)}
             >
-              쿠폰 보기
+              My Wallet
             </a>
             <button
               onClick={() => setEarnedCouponCode(null)}
