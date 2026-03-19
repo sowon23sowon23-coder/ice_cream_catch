@@ -145,38 +145,12 @@ function StatusBanner({
   status,
   reason,
   coupon,
-  result,
 }: {
   status: RedeemStatus;
   reason?: string;
   coupon?: CouponData;
-  result?: RedeemResult;
 }) {
-  if (status === "idle" || status === "loading") return null;
-
-  if (status === "redeemed" && result) {
-    return (
-      <div className="bg-green-500 rounded-3xl p-6 text-white">
-        <div className="text-center mb-4">
-          <div className="text-5xl mb-2">✅</div>
-          <h2 className="text-2xl font-black">사용 처리 완료!</h2>
-        </div>
-        <div className="bg-white/20 rounded-2xl p-4 space-y-2 text-sm">
-          <Row label="쿠폰 코드" value={result.code} mono />
-          <Row label="할인 금액" value={formatDiscount(result.discountAmount)} bold />
-          <Row label="사용 시간" value={formatDateTime(result.redeemedAt)} />
-          <Row label="매장 ID" value={result.storeId} />
-          <Row label="직원 ID" value={result.staffId} />
-          {result.orderNumber && (
-            <Row label="주문 번호" value={result.orderNumber} />
-          )}
-        </div>
-        <p className="text-center text-white/80 text-xs mt-3">
-          POS에서 할인을 직접 적용해주세요
-        </p>
-      </div>
-    );
-  }
+  if (status === "idle" || status === "loading" || status === "redeemed") return null;
 
   if (status === "valid" && coupon) {
     return (
@@ -274,44 +248,109 @@ function Row({
 }
 
 // ─────────────────────────────────────────────
-// Main Redeem Screen
+// History View
 // ─────────────────────────────────────────────
-function RedeemScreen({
+function HistoryView({
+  history,
+  onNewScan,
+}: {
+  history: RedeemResult[];
+  onNewScan: () => void;
+}) {
+  return (
+    <div className="flex-1 p-4 space-y-4 max-w-lg mx-auto w-full">
+      {/* New scan CTA */}
+      <button
+        onClick={onNewScan}
+        className="w-full bg-[#960853] hover:bg-[#6e0339] text-white py-5 rounded-2xl text-xl font-black transition-colors shadow-lg"
+      >
+        + 새 쿠폰 검증
+      </button>
+
+      {/* History list */}
+      <div className="space-y-3">
+        {history.map((item, idx) => (
+          <div
+            key={idx}
+            className={`bg-white rounded-2xl p-4 flex items-center gap-4 ${idx === 0 ? "ring-2 ring-green-400" : ""}`}
+          >
+            {/* Index badge */}
+            <div className={`shrink-0 w-10 h-10 rounded-full flex items-center justify-center text-sm font-black
+              ${idx === 0 ? "bg-green-500 text-white" : "bg-gray-100 text-gray-400"}`}>
+              {idx === 0 ? "✓" : history.length - idx}
+            </div>
+
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 mb-0.5">
+                <span className="font-mono font-black text-[#960853] tracking-wider text-sm">
+                  {item.code}
+                </span>
+                <span className="text-xs text-gray-400">
+                  {new Date(item.redeemedAt).toLocaleTimeString("ko-KR", {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                    second: "2-digit",
+                  })}
+                </span>
+              </div>
+              <div className="flex items-center gap-2 text-xs text-gray-500 flex-wrap">
+                <span className="font-bold text-gray-800">
+                  {item.discountAmount.toLocaleString("ko-KR")}원 할인
+                </span>
+                {item.orderNumber && (
+                  <span className="text-gray-400">주문 #{item.orderNumber}</span>
+                )}
+              </div>
+            </div>
+
+            {idx === 0 && (
+              <span className="shrink-0 text-xs bg-green-100 text-green-700 font-bold px-2 py-1 rounded-full">
+                방금 처리
+              </span>
+            )}
+          </div>
+        ))}
+      </div>
+
+      {history.length === 0 && (
+        <p className="text-center text-gray-500 py-10">처리된 쿠폰이 없습니다</p>
+      )}
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────
+// Scan View
+// ─────────────────────────────────────────────
+function ScanView({
   token,
   storeId,
   staffId,
   initialCode,
-  onLogout,
+  onRedeemed,
 }: {
   token: string;
   storeId: string;
   staffId: string;
   initialCode: string;
-  onLogout: () => void;
+  onRedeemed: (result: RedeemResult) => void;
 }) {
   const [code, setCode] = useState(initialCode);
   const [orderNumber, setOrderNumber] = useState("");
   const [status, setStatus] = useState<RedeemStatus>(initialCode ? "loading" : "idle");
   const [reason, setReason] = useState("");
   const [coupon, setCoupon] = useState<CouponData | undefined>();
-  const [result, setResult] = useState<RedeemResult | undefined>();
   const [redeemLoading, setRedeemLoading] = useState(false);
 
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Auto-validate if code comes from URL
   useEffect(() => {
-    if (initialCode) {
-      handleValidate(initialCode);
-    }
+    if (initialCode) handleValidate(initialCode);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Auto-focus input
   useEffect(() => {
-    if (status === "idle" || status === "redeemed") {
-      inputRef.current?.focus();
-    }
+    if (status === "idle") inputRef.current?.focus();
   }, [status]);
 
   const reset = () => {
@@ -320,7 +359,6 @@ function RedeemScreen({
     setStatus("idle");
     setReason("");
     setCoupon(undefined);
-    setResult(undefined);
     setTimeout(() => inputRef.current?.focus(), 50);
   };
 
@@ -331,7 +369,6 @@ function RedeemScreen({
     setStatus("loading");
     setReason("");
     setCoupon(undefined);
-    setResult(undefined);
 
     try {
       const res = await fetch("/api/coupons/validate", {
@@ -340,7 +377,6 @@ function RedeemScreen({
         body: JSON.stringify({ code: target }),
       });
       const data = await res.json();
-
       if (data.valid) {
         setStatus("valid");
         setCoupon(data.coupon);
@@ -375,8 +411,8 @@ function RedeemScreen({
       const data = await res.json();
 
       if (data.success) {
-        setStatus("redeemed");
-        setResult({
+        // Immediately hand off to history view
+        onRedeemed({
           code: data.code,
           discountAmount: data.discountAmount,
           redeemedAt: data.redeemedAt,
@@ -397,12 +433,134 @@ function RedeemScreen({
   };
 
   return (
+    <div className="flex-1 p-4 space-y-4 max-w-lg mx-auto w-full">
+      {/* Code Input */}
+      <div className="bg-white rounded-3xl p-5">
+        <label className="block text-sm font-bold text-gray-600 mb-2">
+          쿠폰 코드 입력 (QR 스캔 또는 직접 입력)
+        </label>
+        <div className="flex gap-2">
+          <input
+            ref={inputRef}
+            type="text"
+            value={code}
+            onChange={(e) => setCode(e.target.value.toUpperCase())}
+            onKeyDown={(e) => { if (e.key === "Enter") handleValidate(); }}
+            placeholder="예: YG7A92K3"
+            maxLength={20}
+            className="flex-1 border-2 border-gray-200 rounded-2xl px-4 py-4 text-2xl font-mono font-bold tracking-widest focus:outline-none focus:border-[#960853] transition-colors uppercase placeholder:text-gray-300 placeholder:text-lg placeholder:font-sans placeholder:tracking-normal"
+          />
+          <button
+            onClick={() => handleValidate()}
+            disabled={!code.trim() || status === "loading"}
+            className="bg-[#960853] text-white px-5 py-4 rounded-2xl font-bold text-lg hover:bg-[#6e0339] transition-colors disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
+          >
+            {status === "loading" ? (
+              <span className="block w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin" />
+            ) : (
+              "검증"
+            )}
+          </button>
+        </div>
+        <p className="text-xs text-gray-400 mt-2">
+          QR 스캔 후 Enter 또는 검증 버튼을 누르세요
+        </p>
+      </div>
+
+      {/* Status Banner */}
+      <StatusBanner status={status} reason={reason} coupon={coupon} />
+
+      {/* Redeem section */}
+      {status === "valid" && coupon && (
+        <div className="bg-white rounded-3xl p-5 space-y-4">
+          <div>
+            <label className="block text-sm font-bold text-gray-600 mb-2">
+              주문 번호 (선택 사항)
+            </label>
+            <input
+              type="text"
+              value={orderNumber}
+              onChange={(e) => setOrderNumber(e.target.value)}
+              placeholder="POS 주문 번호 입력"
+              className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 text-lg focus:outline-none focus:border-[#960853] transition-colors"
+            />
+          </div>
+          <button
+            onClick={handleRedeem}
+            disabled={redeemLoading}
+            className="w-full bg-green-500 hover:bg-green-600 text-white py-5 rounded-2xl text-2xl font-black transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
+          >
+            {redeemLoading ? (
+              <span className="flex items-center justify-center gap-3">
+                <span className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                처리 중...
+              </span>
+            ) : (
+              "✅ 사용 처리"
+            )}
+          </button>
+        </div>
+      )}
+
+      {/* Reset after non-valid result */}
+      {(status === "invalid" || status === "used" || status === "expired" || status === "error") && (
+        <button
+          onClick={reset}
+          className="w-full bg-gray-700 hover:bg-gray-600 text-white py-4 rounded-2xl text-xl font-bold transition-colors"
+        >
+          다시 입력
+        </button>
+      )}
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────
+// Main Redeem Screen (manages scan ↔ history views)
+// ─────────────────────────────────────────────
+function RedeemScreen({
+  token,
+  storeId,
+  staffId,
+  initialCode,
+  onLogout,
+}: {
+  token: string;
+  storeId: string;
+  staffId: string;
+  initialCode: string;
+  onLogout: () => void;
+}) {
+  const [view, setView] = useState<"scan" | "history">("scan");
+  const [history, setHistory] = useState<RedeemResult[]>([]);
+
+  const handleRedeemed = (result: RedeemResult) => {
+    setHistory((prev) => [result, ...prev]);
+    setView("history");
+  };
+
+  const headerTitle = view === "history"
+    ? `사용 완료 (${history.length}건)`
+    : "쿠폰 검증 / 사용";
+
+  return (
     <div className="min-h-screen bg-gray-900 flex flex-col">
       {/* Header */}
       <div className="bg-[#960853] text-white px-4 py-3 flex items-center justify-between">
-        <div>
-          <p className="text-xs opacity-70">YOGURTLAND</p>
-          <p className="font-black text-lg leading-tight">쿠폰 검증 / 사용</p>
+        <div className="flex items-center gap-3">
+          {view === "history" && (
+            <button
+              onClick={() => setView("scan")}
+              className="text-white/70 hover:text-white text-xl leading-none"
+              aria-label="스캔으로 돌아가기"
+            >
+              ←
+            </button>
+          )}
+          <div>
+            <p className="text-xs opacity-70">YOGURTLAND</p>
+            <p className="font-black text-lg leading-tight">{headerTitle}</p>
+          </div>
         </div>
         <div className="text-right text-xs opacity-80">
           <p>{storeId}</p>
@@ -413,92 +571,17 @@ function RedeemScreen({
         </div>
       </div>
 
-      <div className="flex-1 p-4 space-y-4 max-w-lg mx-auto w-full">
-        {/* Code Input */}
-        <div className="bg-white rounded-3xl p-5">
-          <label className="block text-sm font-bold text-gray-600 mb-2">
-            쿠폰 코드 입력 (QR 스캔 또는 직접 입력)
-          </label>
-          <div className="flex gap-2">
-            <input
-              ref={inputRef}
-              type="text"
-              value={code}
-              onChange={(e) => setCode(e.target.value.toUpperCase())}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") handleValidate();
-              }}
-              placeholder="예: YG7A92K3"
-              maxLength={20}
-              className="flex-1 border-2 border-gray-200 rounded-2xl px-4 py-4 text-2xl font-mono font-bold tracking-widest focus:outline-none focus:border-[#960853] transition-colors uppercase placeholder:text-gray-300 placeholder:text-lg placeholder:font-sans placeholder:tracking-normal"
-            />
-            <button
-              onClick={() => handleValidate()}
-              disabled={!code.trim() || status === "loading"}
-              className="bg-[#960853] text-white px-5 py-4 rounded-2xl font-bold text-lg hover:bg-[#6e0339] transition-colors disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
-            >
-              {status === "loading" ? (
-                <span className="block w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin" />
-              ) : (
-                "검증"
-              )}
-            </button>
-          </div>
-          <p className="text-xs text-gray-400 mt-2">
-            QR 스캔 후 Enter 또는 검증 버튼을 누르세요
-          </p>
-        </div>
-
-        {/* Status Banner */}
-        <StatusBanner
-          status={status}
-          reason={reason}
-          coupon={coupon}
-          result={result}
+      {view === "scan" ? (
+        <ScanView
+          token={token}
+          storeId={storeId}
+          staffId={staffId}
+          initialCode={initialCode}
+          onRedeemed={handleRedeemed}
         />
-
-        {/* Redeem section (only when valid) */}
-        {status === "valid" && coupon && (
-          <div className="bg-white rounded-3xl p-5 space-y-4">
-            <div>
-              <label className="block text-sm font-bold text-gray-600 mb-2">
-                주문 번호 (선택 사항)
-              </label>
-              <input
-                type="text"
-                value={orderNumber}
-                onChange={(e) => setOrderNumber(e.target.value)}
-                placeholder="POS 주문 번호 입력"
-                className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 text-lg focus:outline-none focus:border-[#960853] transition-colors"
-              />
-            </div>
-            <button
-              onClick={handleRedeem}
-              disabled={redeemLoading}
-              className="w-full bg-green-500 hover:bg-green-600 text-white py-5 rounded-2xl text-2xl font-black transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
-            >
-              {redeemLoading ? (
-                <span className="flex items-center justify-center gap-3">
-                  <span className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  처리 중...
-                </span>
-              ) : (
-                "✅ 사용 처리"
-              )}
-            </button>
-          </div>
-        )}
-
-        {/* Reset button after redeemed or error */}
-        {(status === "redeemed" || status === "invalid" || status === "used" || status === "expired" || status === "error") && (
-          <button
-            onClick={reset}
-            className="w-full bg-gray-700 hover:bg-gray-600 text-white py-4 rounded-2xl text-xl font-bold transition-colors"
-          >
-            다음 쿠폰 검증
-          </button>
-        )}
-      </div>
+      ) : (
+        <HistoryView history={history} onNewScan={() => setView("scan")} />
+      )}
     </div>
   );
 }
