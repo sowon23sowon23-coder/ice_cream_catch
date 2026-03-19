@@ -324,7 +324,7 @@ export default function Page() {
     }
   }, [selectedStore]);
 
-  const fetchTop20 = async (m: LeaderMode, store: string) => {
+  const fetchTop20 = async (m: LeaderMode) => {
     setLbLoading(true);
 
     try {
@@ -334,12 +334,6 @@ export default function Page() {
         .order("score", { ascending: false })
         .order("updated_at", { ascending: true })
         .limit(20);
-
-      if (store !== "__ALL__") {
-        query = query.eq("store", store);
-      } else if (m === "today") {
-        query = query.neq("store", "__ALL__");
-      }
 
       if (m === "today") {
         query = query.gte("updated_at", startOfTodayLocalISO());
@@ -353,49 +347,31 @@ export default function Page() {
       if (error && !data) {
         const fallbacks = [
           async () => {
-            let q = supabase
+            const q = supabase
               .from("leaderboard_best_v2")
               .select("nickname_key,nickname_display,score,updated_at,store")
               .order("score", { ascending: false })
               .order("updated_at", { ascending: true })
               .limit(20);
-            if (store !== "__ALL__") {
-              q = q.eq("store", store);
-            } else if (m === "today") {
-              q = q.neq("store", "__ALL__");
-            }
-            if (m === "today") q = q.gte("updated_at", startOfTodayLocalISO());
-            return q;
+            return m === "today" ? q.gte("updated_at", startOfTodayLocalISO()) : q;
           },
           async () => {
-            let q = supabase
+            const q = supabase
               .from("leaderboard_best_v2")
               .select("nickname_key,nickname_display,score,updated_at,character")
               .order("score", { ascending: false })
               .order("updated_at", { ascending: true })
               .limit(20);
-            if (store !== "__ALL__") {
-              q = q.eq("store", store);
-            } else if (m === "today") {
-              q = q.neq("store", "__ALL__");
-            }
-            if (m === "today") q = q.gte("updated_at", startOfTodayLocalISO());
-            return q;
+            return m === "today" ? q.gte("updated_at", startOfTodayLocalISO()) : q;
           },
           async () => {
-            let q = supabase
+            const q = supabase
               .from("leaderboard_best_v2")
               .select("nickname_key,nickname_display,score,updated_at")
               .order("score", { ascending: false })
               .order("updated_at", { ascending: true })
               .limit(20);
-            if (store !== "__ALL__") {
-              q = q.eq("store", store);
-            } else if (m === "today") {
-              q = q.neq("store", "__ALL__");
-            }
-            if (m === "today") q = q.gte("updated_at", startOfTodayLocalISO());
-            return q;
+            return m === "today" ? q.gte("updated_at", startOfTodayLocalISO()) : q;
           },
         ];
 
@@ -504,7 +480,7 @@ export default function Page() {
     setLastNick(nick || undefined);
 
     await syncAllTimeFromLocalIfNeeded(mode, selectedStore, nick);
-    await fetchTop20(mode, selectedStore);
+    await fetchTop20(mode);
 
     if (nick.length >= 2 && nick.length <= 12) {
       try {
@@ -688,7 +664,7 @@ export default function Page() {
     setMode(m);
     const nick = (localStorage.getItem("nickname") || "").trim();
     await syncAllTimeFromLocalIfNeeded(m, selectedStore, nick);
-    await fetchTop20(m, selectedStore);
+    await fetchTop20(m);
     if (nick.length >= 2 && nick.length <= 12) {
       try {
         const mine =
@@ -733,7 +709,7 @@ export default function Page() {
 
     const nick = (localStorage.getItem("nickname") || "").trim();
     await syncAllTimeFromLocalIfNeeded(mode, store, nick);
-    await fetchTop20(mode, store);
+    await fetchTop20(mode);
 
     if (nick.length >= 2 && nick.length <= 12) {
       try {
@@ -918,7 +894,7 @@ export default function Page() {
 
                   if (!isFreePlay) {
                     setMyRank(undefined);
-                    await fetchTop20(leaderboardMode, normalizedStore);
+                    await fetchTop20(leaderboardMode);
                     return;
                   }
 
@@ -959,7 +935,7 @@ export default function Page() {
                     setMyRank(undefined);
                   }
 
-                  await fetchTop20(leaderboardMode, normalizedStore);
+                  await fetchTop20(leaderboardMode);
                 }}
               />
             )}
@@ -1086,9 +1062,6 @@ export default function Page() {
         onClose={() => setLbOpen(false)}
         rows={lbRows}
         loading={lbLoading}
-        stores={STORE_OPTIONS}
-        selectedStore={selectedStore}
-        onStoreChange={onChangeStore}
         myNickname={lastNick}
         myScore={lastScore}
         myRank={myRank}
