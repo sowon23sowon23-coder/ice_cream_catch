@@ -856,7 +856,6 @@ function AdminLogin({ onLogin }: { onLogin: (token: string) => void }) {
       });
       const data = await res.json();
       if (data.ok) {
-        localStorage.setItem("yl_admin_token", password);
         onLogin(password);
       } else {
         setError("비밀번호가 올바르지 않습니다.");
@@ -907,8 +906,7 @@ export default function AdminCouponsPage() {
   const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
-    const saved = localStorage.getItem("yl_admin_token");
-    if (saved) setToken(saved);
+    // Always require password — no localStorage persistence
     setHydrated(true);
   }, []);
 
