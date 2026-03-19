@@ -5,6 +5,7 @@ import { Suspense, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import AdBanner from "@/app/components/AdBanner";
 import { formatDate, formatDiscount, isCouponExpired } from "@/app/lib/couponUtils";
+import { supabase } from "@/app/lib/supabaseClient";
 
 type WalletCoupon = {
   id: number;
@@ -43,14 +44,28 @@ function WalletPageContent() {
 
     setUserId(nextUserId);
 
-    fetch(`/api/coupons/wallet?userId=${encodeURIComponent(nextUserId)}`, { cache: "no-store" })
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.error) {
-          setError(data.error);
+    supabase
+      .from("coupons")
+      .select("id, code, discount_amount, reward_type, status, issued_at, expires_at, redeemed_at")
+      .eq("user_id", nextUserId)
+      .order("issued_at", { ascending: false })
+      .then(({ data, error }) => {
+        if (error) {
+          setError("지갑을 불러오지 못했습니다.");
           return;
         }
-        setCoupons(data.coupons ?? []);
+        setCoupons(
+          (data ?? []).map((c) => ({
+            id: c.id,
+            code: c.code,
+            discountAmount: c.discount_amount,
+            rewardType: c.reward_type,
+            status: c.status,
+            issuedAt: c.issued_at,
+            expiresAt: c.expires_at,
+            redeemedAt: c.redeemed_at,
+          }))
+        );
       })
       .catch(() => setError("지갑을 불러오지 못했습니다."))
       .finally(() => setLoading(false));
