@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse, type NextRequest } from "next/server";
 import {
   type EntryContactType,
   formatEntryCode,
@@ -13,12 +13,6 @@ type EntryRequest = {
   consent?: boolean;
 };
 
-function getClientIp(req: NextRequest): string {
-  const forwarded = req.headers.get("x-forwarded-for");
-  if (forwarded) return forwarded.split(",")[0].trim();
-  return req.headers.get("x-real-ip") || "unknown";
-}
-
 function normalizeByType(contactType: EntryContactType, rawValue: string): string | null {
   if (contactType === "phone") return normalizeUsPhone(rawValue);
   return normalizeEmail(rawValue);
@@ -26,17 +20,6 @@ function normalizeByType(contactType: EntryContactType, rawValue: string): strin
 
 export async function POST(req: NextRequest) {
   const supabase = createServerClient();
-  const ip = getClientIp(req);
-
-  const limit = await supabase.rpc("check_rate_limit", {
-    p_key: `entry:${ip}`,
-    p_limit: 20,
-    p_window_seconds: 60,
-  });
-
-  if (limit.error || limit.data !== true) {
-    return NextResponse.json({ error: "Too many requests. Please try again in a minute." }, { status: 429 });
-  }
 
   let body: EntryRequest;
   try {
