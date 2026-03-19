@@ -102,8 +102,8 @@ export default function LoginScreen({
 
         setEntryCode(json.entryCode ?? null);
         verifiedContact.current = contactValue;
-      } catch {
-        setContactError("Network error while checking phone/email.");
+      } catch (e) {
+        setContactError(e instanceof Error ? e.message : "Network error. Please try again.");
         return;
       }
     }
