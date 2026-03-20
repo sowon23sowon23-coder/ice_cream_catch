@@ -901,6 +901,7 @@ export default function Page() {
                       if (tier) {
                         const expiresAt = getExpiresAt(tier.expiryDays);
                         let couponCode: string | null = null;
+                        let lastError: unknown = null;
                         for (let attempt = 0; attempt < 5 && !couponCode; attempt++) {
                           const code = generateCouponCodeClient();
                           const { error } = await supabase.from("coupons").insert({
@@ -911,10 +912,19 @@ export default function Page() {
                             status: "unused",
                             expires_at: expiresAt.toISOString(),
                           });
-                          if (!error) couponCode = code;
-                          else if (error.code !== "23505") break;
+                          if (!error) {
+                            couponCode = code;
+                          } else {
+                            lastError = error;
+                            console.error("Coupon insert attempt", attempt + 1, "failed:", JSON.stringify(error));
+                            if (error.code !== "23505") break;
+                          }
                         }
-                        if (couponCode) setEarnedCouponCode(couponCode);
+                        if (couponCode) {
+                          setEarnedCouponCode(couponCode);
+                        } else {
+                          console.error("Coupon issuance failed after all attempts. Last error:", lastError);
+                        }
                       }
                     } catch (e) {
                       console.error("Coupon issue error:", e);
