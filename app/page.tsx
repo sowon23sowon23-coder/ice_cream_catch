@@ -427,18 +427,12 @@ export default function Page() {
     }
   };
 
-  const calcMyRank = async (m: LeaderMode, score: number, store: string) => {
+  const calcMyRank = async (m: LeaderMode, score: number, _store: string) => {
     try {
       let query = supabase
         .from("leaderboard_best_v2")
         .select("nickname_key", { count: "exact", head: true })
         .gt("score", score);
-
-      if (store !== "__ALL__") {
-        query = query.eq("store", store);
-      } else if (m === "today") {
-        query = query.neq("store", "__ALL__");
-      }
 
       if (m === "today") {
         query = query.gte("updated_at", startOfTodayLocalISO());
@@ -453,11 +447,6 @@ export default function Page() {
           .select("nickname_key", { count: "exact", head: true })
           .gt("score", score);
 
-        if (store !== "__ALL__") {
-          fallbackQuery = fallbackQuery.eq("store", store);
-        } else if (m === "today") {
-          fallbackQuery = fallbackQuery.neq("store", "__ALL__");
-        }
         if (m === "today") {
           fallbackQuery = fallbackQuery.gte("updated_at", startOfTodayLocalISO());
         }
