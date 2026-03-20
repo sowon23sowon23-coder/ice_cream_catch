@@ -875,6 +875,7 @@ export default function Page() {
                     selectedStore && selectedStore !== "__ALL__" ? selectedStore : fallbackStore;
                   const leaderboardMode: LeaderMode = "today";
                   const isFreePlay = gameMode === "free";
+                  setCouponDebugError(`gameMode=${gameMode} score=${finalScore} nick=${nick}`);
                   const todayBestLocal = isFreePlay
                     ? writeLocalTodayBest(nick || "guest", normalizedStore, finalScore)
                     : readLocalTodayBest(nick || "guest", normalizedStore);
