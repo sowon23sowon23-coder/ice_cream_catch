@@ -26,6 +26,6 @@ export async function GET() {
     });
   } catch (err) {
     console.error("[ads] Error:", err);
-    return NextResponse.json({ banners: {} }, { status: 500 });
+    return NextResponse.json({ banners: {} });
   }
 }

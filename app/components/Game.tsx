@@ -10,7 +10,6 @@ const FALLING_ITEM_CANDIDATES = [
   "gummy-bear.png",
   "green-gummy-bear.png",
   "yellow-gummy-bear.png",
-  "red-gummy-bear.png",
   "orange-gummy-bear.png",
   "strawberry.png",
   "kiwi.png",
@@ -29,12 +28,7 @@ type CaughtItem = { id: number; emoji?: string; image?: string; x: number; y: nu
 type CreamZone = { minX: number; maxX: number; minY: number; maxY: number };
 
 const GAME_BG_CANDIDATES = [
-  "/game-bg-1.jpg",
-  "/game-bg-2.jpg",
-  "/game-bg-1.jpeg",
-  "/game-bg-2.jpeg",
   "/game-bg-1.png",
-  "/game-bg-2.png",
 ] as const;
 
 const DEFAULT_GAME_BG =
