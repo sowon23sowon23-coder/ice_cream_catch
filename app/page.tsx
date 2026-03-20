@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { trackEvent } from "./lib/gtag";
-import { MIN_SCORE_FOR_COUPON } from "./lib/couponUtils";
+import { MIN_SCORE_FOR_COUPON, getScoreTier, getExpiresAt, generateCouponCodeClient } from "./lib/couponUtils";
 import LoginScreen from "./components/LoginScreen";
 import HomeScreen from "./components/HomeScreen";
 import Game from "./components/Game";
@@ -897,14 +897,24 @@ export default function Page() {
                   // Issue coupon if score qualifies
                   if (finalScore >= MIN_SCORE_FOR_COUPON && isFreePlay) {
                     try {
-                      const res = await fetch("/api/coupons/issue", {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ userId: nick || undefined, score: finalScore }),
-                      });
-                      const data = await res.json();
-                      if (data.success && data.coupon?.code) {
-                        setEarnedCouponCode(data.coupon.code);
+                      const tier = getScoreTier(finalScore);
+                      if (tier) {
+                        const expiresAt = getExpiresAt(tier.expiryDays);
+                        let couponCode: string | null = null;
+                        for (let attempt = 0; attempt < 5 && !couponCode; attempt++) {
+                          const code = generateCouponCodeClient();
+                          const { error } = await supabase.from("coupons").insert({
+                            code,
+                            user_id: nick || null,
+                            reward_type: "discount",
+                            discount_amount: tier.discountAmount,
+                            status: "unused",
+                            expires_at: expiresAt.toISOString(),
+                          });
+                          if (!error) couponCode = code;
+                          else if (error.code !== "23505") break;
+                        }
+                        if (couponCode) setEarnedCouponCode(couponCode);
                       }
                     } catch (e) {
                       console.error("Coupon issue error:", e);

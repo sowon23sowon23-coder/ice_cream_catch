@@ -6,7 +6,9 @@ create table if not exists public.rate_limit_events (
 create index if not exists rate_limit_events_key_created_at_idx
   on public.rate_limit_events (key, created_at);
 
-create or replace function public.check_rate_limit(
+drop function if exists public.check_rate_limit(text, integer, integer);
+
+create function public.check_rate_limit(
   p_key text,
   p_limit integer,
   p_window_seconds integer
@@ -43,4 +45,3 @@ begin
   return true;
 end;
 $$;
-

@@ -2,12 +2,22 @@
 const CODE_ALPHABET = "23456789ABCDEFGHJKLMNPQRSTUVWXYZ";
 const CODE_LENGTH = 8;
 
-// generateCouponCode is server-only and uses dynamic require to avoid
-// bundling Node's `crypto` into the client-side bundle.
+// Server-side coupon code generator (Node crypto)
 export function generateCouponCode(): string {
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   const { randomBytes } = require("crypto") as { randomBytes: (n: number) => Buffer };
   const bytes = randomBytes(CODE_LENGTH);
+  let code = "";
+  for (let i = 0; i < CODE_LENGTH; i++) {
+    code += CODE_ALPHABET[bytes[i] % CODE_ALPHABET.length];
+  }
+  return code;
+}
+
+// Browser-safe coupon code generator (Web Crypto API)
+export function generateCouponCodeClient(): string {
+  const bytes = new Uint8Array(CODE_LENGTH);
+  crypto.getRandomValues(bytes);
   let code = "";
   for (let i = 0; i < CODE_LENGTH; i++) {
     code += CODE_ALPHABET[bytes[i] % CODE_ALPHABET.length];
