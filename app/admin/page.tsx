@@ -417,49 +417,6 @@ export default function AdminPage() {
           )}
         </div>
 
-        <div className="mb-4 overflow-hidden rounded-2xl border border-[#f3c7dd] bg-white shadow-[0_12px_24px_rgba(150,9,83,0.12)]">
-          <div className="bg-[linear-gradient(135deg,#fff1f8,#f8c8df)] px-4 py-3">
-            <p className="text-[11px] font-black uppercase tracking-[0.2em] text-[#960953]">Store Summary</p>
-          </div>
-          <div className="grid grid-cols-[1.8fr_80px_100px_100px_90px] bg-[#fff2f8] px-4 py-2 text-xs font-black text-[#8a5a75]">
-            <div>STORE</div>
-            <div className="text-right">ROWS</div>
-            <div className="text-right">TOP</div>
-            <div className="text-right">AVG</div>
-            <div className="text-right">VIEW</div>
-          </div>
-          {storeSummaries.length === 0 ? (
-            <div className="px-4 py-6 text-sm font-semibold text-[#8b6178]">No store data.</div>
-          ) : (
-            <div className="max-h-56 overflow-auto">
-              {storeSummaries.map((s) => (
-                <div
-                  key={s.store}
-                  className="grid grid-cols-[1.8fr_80px_100px_100px_90px] items-center border-t border-[#f9d7e8] px-4 py-2 text-sm"
-                >
-                  <div className="truncate font-black text-[#4e1434]">{s.store}</div>
-                  <div className="text-right font-semibold text-[#6b3a58]">{s.count}</div>
-                  <div className="text-right font-black text-[#7d1148]">{s.topScore}</div>
-                  <div className="text-right font-semibold text-[#6b3a58]">{s.avgScore}</div>
-                  <div className="text-right">
-                    <button
-                      type="button"
-                      disabled={!supportsStore || s.store === "__UNKNOWN__"}
-                      onClick={() => {
-                        if (!supportsStore || s.store === "__UNKNOWN__") return;
-                        setSearch("");
-                        setStoreFilter(s.store);
-                      }}
-                      className="rounded-lg border border-[#edb8d3] bg-white px-2 py-1 text-xs font-black text-[#960953] disabled:opacity-40"
-                    >
-                      Open
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
 
         <div className="mb-4 flex flex-col gap-2 rounded-2xl border border-[#f4c5dd] bg-white/90 p-3 sm:flex-row">
           <input
