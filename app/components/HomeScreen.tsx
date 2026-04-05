@@ -28,8 +28,6 @@ const CHARACTERS: CharacterOption[] = [
 
 const MODES: ModeOption[] = [
   { id: "free", label: "Free Play", detail: "Catch as many as you can." },
-  { id: "mission", label: "Mission", detail: "Catch only target toppings." },
-  { id: "timeAttack", label: "Time Attack", detail: "30 seconds to set your best." },
 ];
 
 export default function HomeScreen({
@@ -55,7 +53,12 @@ export default function HomeScreen({
     const savedMode = localStorage.getItem("selectedMode") as GameMode | null;
 
     if (savedChar && CHARACTERS.some((c) => c.id === savedChar)) setCharacter(savedChar);
-    if (savedMode && MODES.some((m) => m.id === savedMode)) setMode(savedMode);
+    if (savedMode && MODES.some((m) => m.id === savedMode)) {
+      setMode(savedMode);
+    } else {
+      setMode("free");
+      localStorage.setItem("selectedMode", "free");
+    }
   }, []);
 
   const selectedCharacter = useMemo(
