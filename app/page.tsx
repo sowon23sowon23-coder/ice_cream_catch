@@ -12,7 +12,7 @@ import { STORE_OPTIONS } from "./lib/stores";
 
 type CharId = "green" | "berry" | "sprinkle";
 type Phase = "login" | "home" | "game";
-type GameMode = "free" | "mission" | "timeAttack";
+type GameMode = "free";
 
 type DbRow = {
   nickname_key: string;
@@ -275,7 +275,6 @@ function readSyncedLocalAllTimeBest(nickname: string, store: string) {
 export default function Page() {
   const [phase, setPhase] = useState<Phase>("login");
   const [character, setCharacter] = useState<CharId>("green");
-  const [gameMode, setGameMode] = useState<GameMode>("free");
   const [best, setBest] = useState(0);
   const [startSignal, setStartSignal] = useState(0);
   const [authNick, setAuthNick] = useState<string | undefined>(undefined);
@@ -311,6 +310,7 @@ export default function Page() {
     if (savedStore && STORE_OPTIONS.includes(savedStore)) {
       setSelectedStore(savedStore);
     }
+    localStorage.removeItem("selectedMode");
     // Skip login if already verified on this device
     if (savedNick.length >= 2 && savedNick.length <= 12 && contactVerified) {
       setPhase("home");
@@ -838,9 +838,8 @@ export default function Page() {
               <HomeScreen
                 nickname={authNick}
                 bestScore={best}
-                onStart={(char: CharId, mode: GameMode) => {
+                onStart={(char: CharId) => {
                   setCharacter(char);
-                  setGameMode(mode);
                   setLastNick(authNick ?? localStorage.getItem("nickname") ?? undefined);
                   setPhase("game");
                   setStartSignal((n) => n + 1);
@@ -861,7 +860,7 @@ export default function Page() {
             {phase === "game" && (
               <Game
                 character={character}
-                mode={gameMode}
+                mode="free"
                 startSignal={startSignal}
                 onExitToHome={() => setPhase("home")}
                 onBestScore={(newBest: number) => {
@@ -874,21 +873,14 @@ export default function Page() {
                   const normalizedStore =
                     selectedStore && selectedStore !== "__ALL__" ? selectedStore : fallbackStore;
                   const leaderboardMode: LeaderMode = "today";
-                  const isFreePlay = gameMode === "free";
-                  setCouponDebugError(`gameMode=${gameMode} score=${finalScore} nick=${nick}`);
-                  const todayBestLocal = isFreePlay
-                    ? writeLocalTodayBest(nick || "guest", normalizedStore, finalScore)
-                    : readLocalTodayBest(nick || "guest", normalizedStore);
+                  const isFreePlay = true;
+                  setCouponDebugError(`gameMode=free score=${finalScore} nick=${nick}`);
+                  const todayBestLocal = writeLocalTodayBest(nick || "guest", normalizedStore, finalScore);
 
                   setSelectedStore(normalizedStore);
                   localStorage.setItem("selectedStore", normalizedStore);
                   setLastNick(nick || "YOU");
                   setLastScore(todayBestLocal);
-
-                  if (!isFreePlay) {
-                    setPhase("home");
-                    return;
-                  }
 
                   setLbOpen(true);
                   setLbLoading(true);

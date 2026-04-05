@@ -5,7 +5,6 @@ import { trackEvent } from "../lib/gtag";
 import AdBanner from "./AdBanner";
 
 type CharId = "green" | "berry" | "sprinkle";
-type GameMode = "free" | "mission" | "timeAttack";
 
 type CharacterOption = {
   id: CharId;
@@ -14,20 +13,10 @@ type CharacterOption = {
   accent: string;
 };
 
-type ModeOption = {
-  id: GameMode;
-  label: string;
-  detail: string;
-};
-
 const CHARACTERS: CharacterOption[] = [
   { id: "green", label: "Pistachio", flavor: "Smooth and steady", accent: "var(--yl-green)" },
   { id: "berry", label: "Berry Burst", flavor: "Fast and lively", accent: "var(--yl-berry)" },
   { id: "sprinkle", label: "Sprinkle Pop", flavor: "Playful and bright", accent: "var(--yl-yellow)" },
-];
-
-const MODES: ModeOption[] = [
-  { id: "free", label: "Free Play", detail: "Catch as many as you can." },
 ];
 
 export default function HomeScreen({
@@ -40,25 +29,18 @@ export default function HomeScreen({
 }: {
   nickname?: string;
   bestScore: number;
-  onStart: (character: CharId, mode: GameMode) => void;
+  onStart: (character: CharId) => void;
   onOpenLeaderboard: () => void;
   onOpenWallet: () => void;
   onOpenAdmin: () => void;
 }) {
   const [character, setCharacter] = useState<CharId>("green");
-  const [mode, setMode] = useState<GameMode>("free");
 
   useEffect(() => {
     const savedChar = localStorage.getItem("selectedCharacter") as CharId | null;
-    const savedMode = localStorage.getItem("selectedMode") as GameMode | null;
 
     if (savedChar && CHARACTERS.some((c) => c.id === savedChar)) setCharacter(savedChar);
-    if (savedMode && MODES.some((m) => m.id === savedMode)) {
-      setMode(savedMode);
-    } else {
-      setMode("free");
-      localStorage.setItem("selectedMode", "free");
-    }
+    localStorage.removeItem("selectedMode");
   }, []);
 
   const selectedCharacter = useMemo(
@@ -68,15 +50,14 @@ export default function HomeScreen({
 
   const startGame = () => {
     localStorage.setItem("selectedCharacter", character);
-    localStorage.setItem("selectedMode", mode);
 
     trackEvent({
       action: "home_start_click",
       category: "engagement",
-      label: `${character}_${mode}`,
+      label: `${character}_free`,
     });
 
-    onStart(character, mode);
+    onStart(character);
   };
 
   return (
@@ -170,30 +151,6 @@ export default function HomeScreen({
           </div>
         </section>
 
-        <section className="mb-3 rounded-2xl border border-[var(--yl-card-border)] bg-white/80 p-3">
-          <p className="mb-2 text-sm font-black uppercase tracking-[0.14em] text-[var(--yl-primary)]">Game mode</p>
-          <div className="space-y-2">
-            {MODES.map((m) => {
-              const active = m.id === mode;
-              return (
-                <button
-                  key={m.id}
-                  type="button"
-                  onClick={() => setMode(m.id)}
-                  className={`w-full rounded-xl px-3 py-2 text-left transition ${
-                    active
-                      ? "bg-[var(--yl-primary)] text-white shadow-[0_8px_16px_rgba(150,9,83,0.32)]"
-                      : "bg-[var(--yl-card-bg)] text-[var(--yl-ink-strong)] hover:bg-[#fee8f4]"
-                  }`}
-                >
-                  <p className="text-sm font-black">{m.label}</p>
-                  <p className={`text-xs font-semibold ${active ? "text-white/95" : "text-[var(--yl-ink-muted)]"}`}>{m.detail}</p>
-                </button>
-              );
-            })}
-          </div>
-        </section>
-
         <section className="mt-auto rounded-2xl border border-[var(--yl-card-border)] bg-white/85 p-3 shadow-[0_8px_22px_rgba(150,9,83,0.14)]">
           <button
             type="button"
@@ -203,7 +160,7 @@ export default function HomeScreen({
             Start Game
           </button>
           <p className="mt-2 text-center text-xs font-bold text-[var(--yl-ink-muted)]">
-            Selected: {selectedCharacter.label} · {MODES.find((m) => m.id === mode)?.label}
+            Selected: {selectedCharacter.label} · Free Play
           </p>
         </section>
 
