@@ -902,8 +902,12 @@ export default function Page() {
                       const data = await res.json().catch(() => ({}));
 
                       if (res.ok && data?.success && data?.coupon?.code) {
-                        setEarnedCouponCode(data.coupon.code);
+                        const issuedCode = String(data.coupon.code);
+                        setEarnedCouponCode(issuedCode);
                         setCouponDebugError(null);
+                        window.setTimeout(() => {
+                          window.location.href = `/coupon?code=${encodeURIComponent(issuedCode)}`;
+                        }, 250);
                       } else {
                         const errMsg =
                           data?.error ||
@@ -1055,11 +1059,11 @@ export default function Page() {
               <p className="text-white/80 text-xs truncate">코드: {earnedCouponCode}</p>
             </div>
             <a
-              href={authNick ? `/wallet?userId=${encodeURIComponent(authNick)}` : "#"}
+              href={`/coupon?code=${encodeURIComponent(earnedCouponCode)}`}
               className="bg-white text-[#960853] px-3 py-1.5 rounded-xl text-xs font-black shrink-0 hover:bg-pink-50"
               onClick={() => setEarnedCouponCode(null)}
             >
-              My Wallet
+              QR 보기
             </a>
             <button
               onClick={() => setEarnedCouponCode(null)}
