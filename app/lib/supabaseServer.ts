@@ -14,6 +14,21 @@ export function createServerClient() {
   return createClient(url, key);
 }
 
+/**
+ * Write paths must use the service role key.
+ * Falling back to the anon key causes confusing RLS failures in production.
+ */
+export function createServerAdminClient() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+  if (!key) {
+    throw new Error("SUPABASE_SERVICE_ROLE_KEY is required for coupon write operations.");
+  }
+
+  return createClient(url, key);
+}
+
 export function verifyAdminToken(authHeader: string | null): boolean {
   if (!authHeader) return false;
   const token = authHeader.replace("Bearer ", "").trim();

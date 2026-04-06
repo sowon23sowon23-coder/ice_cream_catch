@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { createServerClient } from "@/app/lib/supabaseServer";
+import { createServerAdminClient } from "@/app/lib/supabaseServer";
 import {
   generateCouponCode,
   getScoreTier,
@@ -34,7 +34,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const supabase = createServerClient();
+    const supabase = createServerAdminClient();
     const expiresAt = getExpiresAt(tier.expiryDays);
 
     // Retry up to 5 times on rare code collision

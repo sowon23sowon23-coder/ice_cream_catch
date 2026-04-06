@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { createServerClient } from "@/app/lib/supabaseServer";
+import { createServerAdminClient } from "@/app/lib/supabaseServer";
 
 const ValidateSchema = z.object({
   code: z.string().min(1).max(20),
@@ -19,7 +19,7 @@ export async function POST(req: NextRequest) {
     }
 
     const code = parsed.data.code.toUpperCase().trim();
-    const supabase = createServerClient();
+    const supabase = createServerAdminClient();
 
     const { data: coupon, error } = await supabase
       .from("coupons")

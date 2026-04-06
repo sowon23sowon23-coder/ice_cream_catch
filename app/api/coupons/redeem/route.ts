@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { createServerClient, verifyStaffToken } from "@/app/lib/supabaseServer";
+import { createServerAdminClient, verifyStaffToken } from "@/app/lib/supabaseServer";
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -42,7 +42,7 @@ export async function POST(req: NextRequest) {
     }
 
     const { code, storeId, staffId, orderNumber } = parsed.data;
-    const supabase = createServerClient();
+    const supabase = createServerAdminClient();
 
     // Atomic redemption via PostgreSQL stored procedure
     // Uses SELECT ... FOR UPDATE internally to prevent double-redemption
